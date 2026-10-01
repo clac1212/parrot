@@ -191,15 +191,12 @@ final class CorrectionWatch {
         // An empty field may read as its placeholder (bb: "Ask for a
         // follow-up…" once a message is sent): nothing to follow there.
         if value == watch.element.placeholder() { return nil }
-        let span = Self.span(in: value, before: watch.before, after: watch.after, near: watch.location)
-        // Diagnostic (fork-005): a span sharing no word with the paste is
-        // likely an emptied field read as something else. Sizes only.
-        if let span, Self.sharesNoWord(span, watch.pasted) {
-            var count: CFTypeRef?
-            AXUIElementCopyAttributeValue(watch.element.ref, kAXNumberOfCharactersAttribute as CFString, &count)
-            let placeholder = watch.element.placeholder()
-            Log.info("  corpus: span shares no word: value \((value as NSString).length) units, characters \((count as? Int).map(String.init) ?? "?"), placeholder \(placeholder.map { "\(($0 as NSString).length)" } ?? "none"), anchors \(watch.before.isEmpty ? "-" : "b")\(watch.after.isEmpty ? "-" : "a")")
-        }
+        guard let span = Self.span(in: value, before: watch.before, after: watch.after, near: watch.location) else { return nil }
+        // A dictation that filled its field, read back sharing no word with
+        // the paste: the field was emptied and shows its hint as its value
+        // (bb reports "Ask for a follow-up…" as AXValue, with no
+        // AXPlaceholderValue), not a correction.
+        if watch.before.isEmpty, watch.after.isEmpty, Self.sharesNoWord(span, watch.pasted) { return nil }
         return span
     }
 

@@ -145,6 +145,7 @@ public enum Daemon {
         if let overlay { observers.append(overlay) }
         observers.append(menuBar)
         observers.append(LatencyLog())
+        if let media = MediaPause() { observers.append(media) }  // fork-008
         let controller = DictationController(
             capture: capture,
             transcriber: transcriber,

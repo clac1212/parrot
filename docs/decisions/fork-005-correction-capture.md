@@ -82,7 +82,15 @@ affected records were rewritten as `unreadable`.
 Fourth run: bb's emptied input reads as its placeholder ("Ask for a
 follow-up. @ to mention files…", 71 units — also the "71 units, cursor 0"
 of the second run), recorded as the final text. A value equal to the field's
-`AXPlaceholderValue` now counts as empty. Of the two affected records, one
+`AXPlaceholderValue` now counts as empty. That didn't hold: a diagnostic
+showed bb exposes no `AXPlaceholderValue` and reports its hint as the value
+itself (71 units, `AXNumberOfCharacters` 71). Rule kept instead: when the
+dictation filled its field (both anchors empty) and the text read back shares
+no word of three letters or more with the paste, the field was emptied — the
+last look stands. A user rewriting a whole-field dictation with entirely new
+words is lost to this rule; it is rare. A benchmark found 16 of the first 22
+`edited` records were such artifacts (placeholder ×11, first-word truncations
+from the third run); they were rewritten as `unreadable`. Of the two affected records, one
 got its final text back from the message the user sent; the other became
 `unreadable`.
 

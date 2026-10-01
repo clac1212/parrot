@@ -27,4 +27,7 @@ if [ -z "$IDENTITY" ]; then
     exit 1
 fi
 
+# Pausing media while dictating (fork-008).
+scripts/build-mediaremote.sh
+
 PARROT_SIGN_IDENTITY="$IDENTITY" exec scripts/dev-install.sh

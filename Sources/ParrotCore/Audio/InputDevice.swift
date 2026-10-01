@@ -45,7 +45,13 @@ package struct InputDevice: Equatable {
         }
     }
 
+    /// The input to record from: the system default, or the built-in
+    /// microphone in place of a Bluetooth one (fork-007).
     static func defaultInputID() -> AudioDeviceID? {
+        systemDefaultInputID().map(PreferredInput.choose)
+    }
+
+    static func systemDefaultInputID() -> AudioDeviceID? {
         var id = AudioDeviceID(kAudioObjectUnknown)
         var size = UInt32(MemoryLayout<AudioDeviceID>.size)
         var address = AudioObjectPropertyAddress(

@@ -53,6 +53,13 @@ final class CorrectionWatchTests: XCTestCase {
         XCTAssertEqual(CorrectionWatch.span(in: value, before: "ok.", after: " fin", near: 11), "deux.")
     }
 
+    func testSharesNoWord() {
+        XCTAssertTrue(CorrectionWatch.sharesNoWord("Ask for a follow-up. @ to mention files", "Ok, je viens de faire une dictée."))
+        XCTAssertFalse(CorrectionWatch.sharesNoWord("Ok, je viens de faire une dictée.", "Ok, la jeune femme dictée."))
+        // Words under three letters don't count.
+        XCTAssertTrue(CorrectionWatch.sharesNoWord("et je", "et je"))
+    }
+
     func testAMissingAnchorGivesNothing() {
         XCTAssertNil(CorrectionWatch.span(in: "message envoyé", before: "Bonjour, ", after: "", near: 9))
         XCTAssertNil(CorrectionWatch.span(in: "Bonjour, texte", before: "Bonjour, ", after: " Merci", near: 9))
