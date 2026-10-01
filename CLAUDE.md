@@ -1,0 +1,67 @@
+# parrot — fr-fast fork
+
+Fork of [humanitas-labs/parrot](https://github.com/humanitas-labs/parrot),
+on-device push-to-talk dictation for macOS. This fork aims at, in order:
+
+1. **Speed** — less time between releasing the key and the text at the cursor.
+2. **French** — better and faster French dictation.
+3. **A friendlier UI** — still minimal and opinionated: few settings, good defaults.
+
+Architecture: `docs/architecture.md` (upstream's, read it first: it says where
+each kind of change belongs). User docs: `README.md`.
+
+## Fork rules
+
+- **Document everything, as you go.** Every decision lands in
+  `docs/decisions/fork-NNN-*.md` in the same change: what was decided, the
+  options considered and rejected and why, the measurements behind it, and
+  when to revisit. The `fork-` prefix keeps our numbers from colliding with
+  upstream's ADRs on rebase. A change without its documentation isn't done.
+- Branch `fr-fast`, rebased on `upstream/master`. **Never move or rename
+  upstream files**; put new code in new files and keep edits to upstream files
+  small, so rebases stay cheap.
+- Follow upstream's rules (`docs/architecture.md` §8): no transcript text in
+  logs, disk, or stats; paths from `Paths`; preferences in `Settings`; new
+  behaviour after transcription is a `TranscriptProcessor` or a
+  `DictationObserver`.
+- **Measure before and after** any performance change, on the latency log
+  (below). A speedup without numbers isn't one.
+- Fork ADRs:
+  - [fork-001](docs/decisions/fork-001-local-signing.md) — local signing, installed over the official app, updates off
+
+## Commands
+
+Run from the repo root. Give the user commands alone in a code block — they
+copy-paste, and trailing punctuation has broken commands before.
+
+```sh
+swift build -c release && swift test   # build and unit tests (Xcode required for XCTest)
+scripts/fork-install.sh                # build, sign with Apple Development, install over /Applications/Parrot.app, restart it
+tail -50 ~/Library/Logs/parrot/parrot.err.log   # app log: timings, never text
+```
+
+Always install with `scripts/fork-install.sh`, never `dev-install.sh` alone:
+without the Apple Development identity the build is ad-hoc signed and loses
+the Microphone and Accessibility grants (fork-001). A self-signed identity
+doesn't work: no Team ID, so the hardened runtime refuses Sparkle.framework
+and the app dies at launch. After switching between the
+official app and the fork, macOS asks for both grants again.
+
+## Measuring
+
+Every dictation logs one line (`App/LatencyLog.swift`):
+
+```
+⏱ 650 ms release→text · 5.7 s audio · … · enc 97 · dec 486 · … · lang fr · 48 tokens · …
+```
+
+```sh
+grep -h "⏱" ~/Library/Logs/parrot/parrot.*.log | tail -20
+```
+
+`parrot-bench` (`swift run -c release parrot-bench transcription|capture …`)
+replays audio through the pipeline for repeatable numbers.
+
+Baseline, the official app's log on 2026-10-01 (49 dictations, mostly
+`whisper-small` in French): 140 ms–6.5 s release→text; the decoder is 88 %
+of it, 9.1 ms per token, so time grows with what you say.
