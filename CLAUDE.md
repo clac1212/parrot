@@ -35,6 +35,7 @@ each kind of change belongs). User docs: `README.md`.
   - [fork-006](docs/decisions/fork-006-transcript-stays-on-clipboard.md) — the transcript stays on the clipboard after the paste
   - [fork-007](docs/decisions/fork-007-built-in-mic-over-bluetooth.md) — the built-in microphone instead of a Bluetooth one (AirPods lose the first ~0.55 s)
   - [fork-008](docs/decisions/fork-008-pause-media-while-dictating.md) — pause media while dictating, via the vendored MediaRemote adapter
+  - [fork-009](docs/decisions/fork-009-nightly-review.md) — learn at night from the day's dictations ("dreaming"): re-listen, find recurring errors, propose dictionary entries
 
 ## Commands
 

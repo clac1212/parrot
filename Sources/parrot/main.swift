@@ -9,7 +9,7 @@ struct Parrot: ParsableCommand {
         commandName: "parrot",
         abstract: "Minimal macOS dictation daemon. Hold a key (fn by default), speak, release.",
         version: AppBundle.version,
-        subcommands: [Run.self, Setup.self, Doctor.self, Models.self, Install.self],
+        subcommands: [Run.self, Setup.self, Doctor.self, Models.self, Install.self, Dream.self],  // Dream: fork-009
         defaultSubcommand: Run.self
     )
 }

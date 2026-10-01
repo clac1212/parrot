@@ -29,5 +29,7 @@ fi
 
 # Pausing media while dictating (fork-008).
 scripts/build-mediaremote.sh
+# The nightly review's scripts (fork-009).
+scripts/install-dream.sh
 
 PARROT_SIGN_IDENTITY="$IDENTITY" exec scripts/dev-install.sh

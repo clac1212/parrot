@@ -75,6 +75,8 @@ struct SettingsView: View {
                 }
                 Divider()
                 TranscriptionSection(store: store)
+                Divider()
+                NightlySection(store: store)  // fork-009
             }
             .padding(.horizontal, 32)
             .padding(.top, 36)

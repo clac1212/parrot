@@ -17,6 +17,7 @@ struct Settings: Codable, Equatable {
     var stats = StatsSettings()
     var onboarding = OnboardingSettings()
     var corpus = CorpusSettings()  // fork-003
+    var dream = DreamSettings()  // fork-009
 
     init() {}
 
@@ -30,5 +31,6 @@ struct Settings: Codable, Equatable {
         stats = try c.decodeIfPresent(StatsSettings.self, forKey: .stats) ?? StatsSettings()
         onboarding = try c.decodeIfPresent(OnboardingSettings.self, forKey: .onboarding) ?? OnboardingSettings()
         corpus = try c.decodeIfPresent(CorpusSettings.self, forKey: .corpus) ?? CorpusSettings()
+        dream = try c.decodeIfPresent(DreamSettings.self, forKey: .dream) ?? DreamSettings()
     }
 }
