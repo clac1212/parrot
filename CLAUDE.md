@@ -36,6 +36,7 @@ each kind of change belongs). User docs: `README.md`.
   - [fork-007](docs/decisions/fork-007-built-in-mic-over-bluetooth.md) — the built-in microphone instead of a Bluetooth one (AirPods lose the first ~0.55 s)
   - [fork-008](docs/decisions/fork-008-pause-media-while-dictating.md) — pause media while dictating, via the vendored MediaRemote adapter
   - [fork-009](docs/decisions/fork-009-nightly-review.md) — learn at night from the day's dictations ("dreaming"): re-listen, find recurring errors, propose dictionary entries
+  - [fork-010](docs/decisions/fork-010-menu-bar-panel.md) — a French panel from the menu bar instead of the menu and Settings window
 
 ## Commands
 

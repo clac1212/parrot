@@ -11,7 +11,8 @@ import AppKit
 final class MenuBarController {
     private static func readyStatus(_ key: HotkeyKey) -> String { "idle · hold \(key.shortName) to dictate" }
 
-    private let statusItem: NSStatusItem
+    /// Internal for the fork's panel (fork-010), which takes over its clicks.
+    let statusItem: NSStatusItem
     /// Slot: what the dictation loop is doing. Driven as a `DictationObserver`.
     let statusLine: NSMenuItem
     /// Slot: the loaded model.

@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Settings → Learn Overnight: one button that sets up or removes the nightly
+/// Apprentissage nocturne (the panel, fork-010; Settings → Learn Overnight before): one button that sets up or removes the nightly
 /// review (fork-009), and what the last night did.
 struct NightlySection: View {
     @ObservedObject var store: SettingsStore
@@ -9,13 +9,13 @@ struct NightlySection: View {
     @State private var state = NightlyReview.State.load()
 
     var body: some View {
-        SettingsGroup("Learn Overnight") {
-            Text("Each night at 3:00, Parrot reviews the day's dictations, finds the words it keeps getting wrong, and proposes dictionary entries. Claude judges short excerpts; audio never leaves the Mac.")
+        SettingsGroup("Apprentissage nocturne") {
+            Text("Chaque nuit à 3 h, Parrot relit les dictées du jour, repère les mots qu'il rate souvent et propose des entrées de dictionnaire. Claude juge de courts extraits ; l'audio ne quitte jamais le Mac.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            PillRow("Nightly review") {
-                Button(installed ? "Turn Off" : "Turn On") {
+            PillRow("Revue de nuit") {
+                Button(installed ? "Désactiver" : "Activer") {
                     if installed { NightlyTask.remove() } else { try? NightlyTask.install() }
                     installed = NightlyTask.isInstalled
                 }
@@ -23,27 +23,27 @@ struct NightlySection: View {
                 .disabled(!NightlyTask.isAvailable || !store.current.corpus.enabled)
             }
             if installed {
-                PillRow(state.map { "Last night: \(Self.date($0.lastRun))" } ?? "Not run yet") {
+                PillRow(state.map { "Dernière nuit : \(Self.date($0.lastRun))" } ?? "Pas encore lancée") {
                     HStack(spacing: 8) {
-                        Button("Run Now") { NightlyTask.runNow() }
+                        Button("Lancer") { NightlyTask.runNow() }
                             .buttonStyle(.pill)
                         if let report = state?.lastReport {
-                            Button("Open Report") { NSWorkspace.shared.open(URL(fileURLWithPath: report)) }
+                            Button("Rapport") { NSWorkspace.shared.open(URL(fileURLWithPath: report)) }
                                 .buttonStyle(.pill)
                         }
                     }
                 }
             }
             if !store.current.corpus.enabled {
-                Text("Needs the corpus: set \"corpus\": {\"enabled\": true} in the config file.")
+                Text("Nécessite le corpus : mets \"corpus\": {\"enabled\": true} dans le fichier de configuration.")
                     .font(.caption).foregroundStyle(.secondary)
             } else if !NightlyTask.isAvailable {
-                Text("Install the scripts with scripts/fork-install.sh first.")
+                Text("Installe d'abord les scripts avec scripts/fork-install.sh.")
                     .font(.caption).foregroundStyle(.secondary)
             } else if installed {
                 Text(store.current.dream.autoApply
-                     ? "Safe entries go straight into the dictionary; each change is backed up."
-                     : "Proposals only: entries are listed in the report, not written. Set \"dream\": {\"autoApply\": true} to apply them.")
+                     ? "Les entrées sûres vont directement dans le dictionnaire ; chaque changement est sauvegardé."
+                     : "Propositions seulement : les entrées sont listées dans le rapport, pas écrites. Mets \"dream\": {\"autoApply\": true} pour les appliquer.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
