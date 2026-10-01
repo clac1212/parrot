@@ -6,8 +6,8 @@ import Foundation
 ///
 /// Paste works in every app that supports paste, including the terminals and
 /// Electron editors that ignore `type-unicode` and drop its text with no
-/// error. It borrows the clipboard for `TextInjector.settleDelay` and always
-/// restores it. `type-unicode` leaves the clipboard alone.
+/// error. Upstream borrowed the clipboard and restored it; the fork leaves the
+/// transcript on it (fork-006). `type-unicode` leaves the clipboard alone.
 public enum InjectMode: String, CaseIterable, Sendable {
     case paste
     case typeUnicode = "type-unicode"
@@ -59,7 +59,9 @@ final class TextInjector {
     func inject(_ text: String) {
         guard !text.isEmpty else { return }
         switch mode {
-        case .paste: clipboard.paste(text)
+        // Fork (fork-006): the transcript stays on the clipboard, so a
+        // dictation pasted where there was no text field isn't lost.
+        case .paste: clipboard.copy(text); Self.postCommandV()
         case .typeUnicode: Self.typeUnicode(text)
         }
     }

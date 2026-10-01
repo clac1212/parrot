@@ -32,6 +32,7 @@ each kind of change belongs). User docs: `README.md`.
   - [fork-003](docs/decisions/fork-003-recording-corpus.md) — opt-in corpus of the user's dictations (audio; text since fork-005), for the French benchmark
   - [fork-004](docs/decisions/fork-004-parakeet-ultra.md) — Parakeet Ultra through FluidAudio as the French engine
   - [fork-005](docs/decisions/fork-005-correction-capture.md) — capture of the user's corrections after paste, in the corpus (text on disk, deliberately)
+  - [fork-006](docs/decisions/fork-006-transcript-stays-on-clipboard.md) — the transcript stays on the clipboard after the paste
 
 ## Commands
 
