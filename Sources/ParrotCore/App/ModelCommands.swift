@@ -23,12 +23,12 @@ public enum ModelCommands {
             throw SilentExit(1)
         }
         WhisperKitTranscriber.migrateLegacyModels()
-        let t = WhisperKitTranscriber(model: m)
+        let t = Transcribers.make(m)
 
         let sem = DispatchSemaphore(value: 0)
         var capturedError: Error?
         Task.detached {
-            do { try await t.warmUp() } catch { capturedError = error }
+            do { try await t.warmUp(progress: nil) } catch { capturedError = error }
             sem.signal()
         }
         sem.wait()

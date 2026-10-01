@@ -114,6 +114,7 @@ final class DictationController {
         if dumpWav, !samples.isEmpty {
             writeDump(samples)
         }
+        let kept = RecordingCorpus.keep(samples)  // fork-003
 
         guard !samples.isEmpty else {
             settle()
@@ -143,6 +144,7 @@ final class DictationController {
                     observers.forEach { $0.dictationFailed(error) }
                     return
                 }
+                RecordingCorpus.delivered(transcript.text, kept: kept, model: transcriber.modelID)  // fork-005
                 let result = DictationResult(
                     captureDuration: seconds,
                     transcriptionTime: elapsed,

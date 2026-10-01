@@ -91,7 +91,7 @@ enum Startup {
 
         // Don't look in ~/Documents for an old cache: under launchd that read
         // is denied or prompts. Name the command that can migrate instead.
-        if !WhisperKitTranscriber.isCached(model) {
+        if !Transcribers.isCached(model) {
             Log.info("\(model.id) not in \(Paths.appSupport.path), downloading. to reuse a copy from ~/Documents/huggingface, run `parrot setup` instead.")
         }
 

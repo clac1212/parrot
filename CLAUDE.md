@@ -21,13 +21,17 @@ each kind of change belongs). User docs: `README.md`.
   upstream files**; put new code in new files and keep edits to upstream files
   small, so rebases stay cheap.
 - Follow upstream's rules (`docs/architecture.md` §8): no transcript text in
-  logs, disk, or stats; paths from `Paths`; preferences in `Settings`; new
-  behaviour after transcription is a `TranscriptProcessor` or a
-  `DictationObserver`.
+  logs, disk, or stats (exception: the opt-in corpus, fork-005); paths from
+  `Paths`; preferences in `Settings`; new behaviour after transcription is a
+  `TranscriptProcessor` or a `DictationObserver`.
 - **Measure before and after** any performance change, on the latency log
   (below). A speedup without numbers isn't one.
 - Fork ADRs:
   - [fork-001](docs/decisions/fork-001-local-signing.md) — local signing, installed over the official app, updates off
+  - [fork-002](docs/decisions/fork-002-notch-overlay.md) — dictation indicator around the notch (DynamicNotchKit), pill as fallback
+  - [fork-003](docs/decisions/fork-003-recording-corpus.md) — opt-in corpus of the user's dictations (audio; text since fork-005), for the French benchmark
+  - [fork-004](docs/decisions/fork-004-parakeet-ultra.md) — Parakeet Ultra through FluidAudio as the French engine
+  - [fork-005](docs/decisions/fork-005-correction-capture.md) — capture of the user's corrections after paste, in the corpus (text on disk, deliberately)
 
 ## Commands
 

@@ -278,7 +278,8 @@ private struct OverlayPill: View {
     }
 }
 
-private struct Waveform: View {
+/// Internal, not private: the notch shows it too (fork-002).
+struct Waveform: View {
     let levels: [Float]
     var transcribing = false
     var heardVoice = false

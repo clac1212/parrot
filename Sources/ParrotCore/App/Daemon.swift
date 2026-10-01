@@ -59,7 +59,7 @@ public enum Daemon {
             MicrophoneAccess.requestIfUndetermined()
         }
 
-        let transcriber = WhisperKitTranscriber(model: chosenModel)
+        let transcriber = Transcribers.make(chosenModel)
 
         try MainActor.assumeIsolated {
             try runLoop(model: chosenModel, transcriber: transcriber, settings: settings, options: options)
@@ -83,7 +83,7 @@ public enum Daemon {
     @MainActor
     private static func runLoop(
         model: TranscriptionModel,
-        transcriber: WhisperKitTranscriber,
+        transcriber: any ModelTranscriber,
         settings: SettingsStore,
         options: DaemonOptions
     ) throws {
@@ -92,7 +92,8 @@ public enum Daemon {
 
         let monitor = HotkeyMonitor(key: options.hotkey ?? settings.current.hotkey.key, debug: options.debugHotkey)
         let capture = AudioCapture(mode: options.captureMode)
-        let overlay: RecordingOverlay? = options.noOverlay ? nil : RecordingOverlay()
+        // The notch on a notched screen, else the pill (fork-002).
+        let overlay: NotchOverlay? = options.noOverlay ? nil : NotchOverlay()
         if let overlay {
             capture.onLevel = { level in overlay.pushLevel(level) }
         }
@@ -158,6 +159,7 @@ public enum Daemon {
         // Each setting applies itself here when it changes, from the window
         // or a hand edit of settings.json (#41). CLI flags only set the
         // starting values of a foreground run.
+        RecordingCorpus.isEnabled = { settings.current.corpus.enabled }  // fork-003
         settings.observe { old, new in
             if old.hotkey != new.hotkey {
                 if options.hotkey != nil {
@@ -193,7 +195,7 @@ public enum Daemon {
             var retryDelay: UInt64 = 30
             while true {
                 do {
-                    try await transcriber.warmUp()
+                    try await transcriber.warmUp(progress: nil)
                     break
                 } catch {
                     Log.error("\(StartupFailure.warmupFailed(error).message); retrying in \(retryDelay)s")

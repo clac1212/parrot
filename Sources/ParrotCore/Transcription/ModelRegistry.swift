@@ -43,6 +43,18 @@ package enum ModelRegistry {
             languages: ["multi"],
             recommended: false
         ),
+        // Fork (fork-004): Parakeet TDT 0.6B v3 post-trained by Moondream,
+        // through FluidAudio. Parakeet v3's 25 languages.
+        TranscriptionModel(
+            id: "parakeet-ultra",
+            displayName: "Parakeet Ultra",
+            engine: .parakeet,
+            whisperKitID: nil,
+            sizeMB: 603,
+            languages: ["bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it",
+                        "lt", "lv", "mt", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk"],
+            recommended: false
+        ),
     ]
 
     package static func find(_ id: String) -> TranscriptionModel? {

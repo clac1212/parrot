@@ -13,7 +13,7 @@ import Foundation
 final class ModelSwitcher {
     /// The model the controller transcribes with.
     private(set) var model: TranscriptionModel
-    private var transcriber: WhisperKitTranscriber
+    private var transcriber: any ModelTranscriber
     /// Set by the daemon once the controller exists.
     weak var controller: DictationController?
 
@@ -23,7 +23,7 @@ final class ModelSwitcher {
     /// Bumped on every change, so a superseded load cannot swap or report.
     private var generation = 0
 
-    init(model: TranscriptionModel, transcriber: WhisperKitTranscriber, menuBar: MenuBarController, status: ModelLoadStatus? = nil) {
+    init(model: TranscriptionModel, transcriber: any ModelTranscriber, menuBar: MenuBarController, status: ModelLoadStatus? = nil) {
         self.model = model
         self.transcriber = transcriber
         self.menuBar = menuBar
@@ -45,8 +45,8 @@ final class ModelSwitcher {
         }
 
         let generation = self.generation
-        let incoming = WhisperKitTranscriber(model: next)
-        report(WhisperKitTranscriber.isCached(next) ? .loading : .downloading(nil), next, generation)
+        let incoming = Transcribers.make(next)
+        report(Transcribers.isCached(next) ? .loading : .downloading(nil), next, generation)
         Log.info("model: loading \(next.id) behind \(model.id)")
 
         // The switcher lives as long as the daemon, so the task holds it
@@ -79,7 +79,7 @@ final class ModelSwitcher {
         }
     }
 
-    private func swap(to next: TranscriptionModel, _ incoming: WhisperKitTranscriber) {
+    private func swap(to next: TranscriptionModel, _ incoming: any ModelTranscriber) {
         let outgoing = transcriber
         controller?.replaceTranscriber(incoming)
         transcriber = incoming

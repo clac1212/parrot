@@ -24,7 +24,7 @@ Requires macOS 14+ on Apple Silicon. Parrot is signed and notarized, so permissi
 ## 2. Usage
 
 1. Click into any text field.
-2. Hold `fn` and speak. A small pill at the bottom of the screen shows the mic is live. On a keyboard where `fn` does nothing (Logitech and most third-party keyboards), choose another key under **Hotkey** in **Settings…**: left or right Option, Command, Control, or Shift. The change applies from the next press.
+2. Hold `fn` and speak. Around the notch, a pulsing dot, the elapsed time and a waveform show the mic is live; on a screen without a notch, a small pill at the bottom does. On a keyboard where `fn` does nothing (Logitech and most third-party keyboards), choose another key under **Hotkey** in **Settings…**: left or right Option, Command, Control, or Shift. The change applies from the next press.
 3. Release. The transcript is pasted at the cursor, usually within 200–300 ms, and your clipboard is restored.
 
 Choose **Launch at login** in **Settings…** to start Parrot with your Mac. A tap shorter than 0.3 s, or a hold with another modifier, is ignored, so shortcuts on the hotkey still work. If `fn` is mapped to input source or emoji, `parrot doctor` shows how to fix it.
@@ -48,7 +48,7 @@ Add your names and technical terms to `~/.config/parrot/dictionary`, a plain-tex
 | `parrot models list` | List available models |
 | `parrot --model whisper-large-v3-turbo` | Larger, multilingual model |
 | `parrot --hotkey right-option` | Use another key for this run only; Settings… changes the saved key |
-| `parrot --no-overlay` | Hide the recording pill |
+| `parrot --no-overlay` | Hide the recording indicator (notch or pill) |
 | `parrot --inject-mode type-unicode` | Type instead of paste (leaves the clipboard alone) |
 
 ## 5. How it works

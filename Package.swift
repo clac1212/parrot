@@ -13,6 +13,10 @@ let package = Package(
         // In-app updates (#50). A binary framework: scripts/build-app.sh
         // embeds it in Parrot.app/Contents/Frameworks and signs it.
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),
+        // Dictation indicator around the notch (fork-002).
+        .package(url: "https://github.com/MrKai77/DynamicNotchKit.git", exact: "1.1.0"),
+        // Parakeet on the Neural Engine (fork-004).
+        .package(url: "https://github.com/FluidInference/FluidAudio.git", exact: "0.17.4"),
     ],
     targets: [
         // All behaviour: capture, hotkey, transcription, pipeline, settings, UI.
@@ -21,6 +25,8 @@ let package = Package(
             dependencies: [
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
                 .product(name: "Sparkle", package: "Sparkle"),
+                .product(name: "DynamicNotchKit", package: "DynamicNotchKit"),
+                .product(name: "FluidAudio", package: "FluidAudio"),
             ]
         ),
         // Thin entry point: ArgumentParser commands that call into ParrotCore.
