@@ -37,6 +37,25 @@ final class DreamTests: XCTestCase {
         XCTAssertNil(WordAlignment.excerpt("rien ici", around: "absent"))
     }
 
+    func testCoherePiecesStayUnderNineSeconds() {
+        // 30 s of tone with a silent 200 ms every 5 s.
+        var audio = [Float](repeating: 0.1, count: 30 * 16_000)
+        for s in stride(from: 5, to: 30, by: 5) {
+            for i in (s * 16_000)..<(s * 16_000 + 3_200) { audio[i] = 0 }
+        }
+        let pieces = CohereReference.pieces(audio)
+        XCTAssertEqual(pieces.reduce(0) { $0 + $1.count }, audio.count)
+        XCTAssertTrue(pieces.allSatisfy { Double($0.count) / 16_000 <= CohereReference.maxSegment })
+        XCTAssertGreaterThan(pieces.count, 3)
+        XCTAssertEqual(CohereReference.pieces(Array(audio.prefix(8 * 16_000))).count, 1)
+    }
+
+    func testCohereHallucinationFilter() {
+        XCTAssertTrue(CohereReference.isHallucination("Merci."))
+        XCTAssertTrue(CohereReference.isHallucination(" "))
+        XCTAssertFalse(CohereReference.isHallucination("Merci pour ton retour."))
+    }
+
     func testPhoneticSimilarity() {
         XCTAssertGreaterThan(FrenchPhonetics.similarity("Vercelle", "Vercel"), 0.8)
         XCTAssertGreaterThan(FrenchPhonetics.similarity("post hoc", "PostHog"), 0.6)

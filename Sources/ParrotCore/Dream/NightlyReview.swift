@@ -83,8 +83,8 @@ package enum NightlyReview {
     /// A `dictionary` verdict at or above this probability is applied (or
     /// proposed); below, it is listed as uncertain.
     static let acceptProbability = 0.8
-    /// The heavy model that re-listens at night: too slow to dictate with.
-    static let referenceModel = "whisper-large-v3-turbo"
+    /// The model that re-listens at night (`CohereReference`).
+    static let referenceModel = "cohere-transcribe"
 
     static func key(wrong: String, right: String) -> String { "\(wrong.lowercased())→\(right)" }
 
@@ -105,17 +105,15 @@ package enum NightlyReview {
     private static func reTranscribe(_ records: [CorpusRecord]) async throws {
         let missing = records.filter { $0.reference == nil && FileManager.default.fileExists(atPath: $0.wav.path) }
             .prefix(maxReferencesPerRun)
-        guard !missing.isEmpty, let model = ModelRegistry.find(referenceModel) else { return }
-        let transcriber = WhisperKitTranscriber(model: model)
-        try await transcriber.warmUp()
+        guard !missing.isEmpty else { return }
+        let cohere = try await CohereReference.load()
         let refs = try Paths.prepareDirectory(Paths.dream.appendingPathComponent("references", isDirectory: true))
         for record in missing {
             guard let audio = WAVReader.samples(record.wav), !audio.isEmpty else { continue }
-            let transcript = try await transcriber.transcribe(audio, context: TranscriptionContext(language: "fr"))
+            let text = try await cohere.transcribe(audio)
             let file = try Paths.preparePrivateFile(refs.appendingPathComponent(record.name + ".txt"))
-            try Data(transcript.text.utf8).write(to: file)
+            try Data(text.utf8).write(to: file)
         }
-        await transcriber.unload()
         Log.info("dream: re-transcribed \(missing.count) dictations with \(referenceModel)")
     }
 
@@ -430,11 +428,14 @@ enum Report {
         out += "## Candidats examinés (\(candidates.count))\n\n"
         if main == nil, !candidates.isEmpty { out += "_Le juge n'a pas répondu cette nuit ; les candidats reviendront demain._\n\n" }
         if !candidates.isEmpty {
-            out += "| Écrit | → Voulu | Vu | Juge | Ombre |\n|---|---|---|---|---|\n"
+            // The shadow column only when a shadow judge ran.
+            let withShadow = shadow != nil
+            out += withShadow ? "| Écrit | → Voulu | Vu | Juge | Ombre |\n|---|---|---|---|---|\n"
+                : "| Écrit | → Voulu | Vu | Juge |\n|---|---|---|---|\n"
             for c in candidates {
                 let m = verdicts[c.id].map { "\($0.verdict) \(String(format: "%.2f", $0.probability))" } ?? "—"
                 let s = shadows[c.id].map { "\($0.verdict) \(String(format: "%.2f", $0.probability))" } ?? "—"
-                out += "| \(c.wrong) | \(c.right) | \(c.count) | \(m) | \(s) |\n"
+                out += "| \(c.wrong) | \(c.right) | \(c.count) | \(m)" + (withShadow ? " | \(s) |\n" : " |\n")
             }
             out += "\n"
         }

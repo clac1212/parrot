@@ -32,8 +32,8 @@ plain, reviewable data — dictionary entries.
 A nightly job, outside the app (Parrot only reads the dictionary it updates):
 
 1. **Re-listen** — re-transcribe the day's corpus (fork-003) locally with a
-   heavy model too slow to dictate with (Whisper large-v3-turbo): a silver
-   reference for every dictation, edited or not.
+   heavy model too slow to dictate with (Cohere Transcribe, see §3): a second
+   opinion on every dictation, edited or not.
 2. **Compare** — align Parakeet's output, the re-transcription and the
    user's final text (fork-005); extract word-level substitutions.
 3. **Find patterns** — count substitutions across days; keep those that recur
@@ -41,10 +41,8 @@ A nightly job, outside the app (Parrot only reads the dictionary it updates):
    Deterministic code, no LLM.
 4. **Judge** — a language model gets the short list of candidates with their
    evidence (three versions of each passage) and answers per candidate:
-   dictionary entry, or not (rewrite, grammar, one-off). Pluggable: Claude
-   first (short excerpts leave the Mac, audio never does), a local model
-   (~12B, runs on the M4 Pro) once its decisions agree with Claude's on the
-   same candidates.
+   dictionary entry, or not (rewrite, grammar, one-off). Claude (short
+   excerpts leave the Mac, audio never does).
 5. **Apply** — write accepted entries to `~/.config/parrot/dictionary`, with a
    backup and a changelog line per change, so any entry can be reverted.
    Uncertain ones go to the report as proposals.
@@ -56,9 +54,12 @@ Setup: one button in Settings that installs (or removes) the nightly task.
 ## 3. As built
 
 - **`parrot dream prepare`** (`Dream/NightlyReview.swift`): re-transcribes
-  each corpus WAV not yet seen with `whisper-large-v3-turbo` (WhisperKit,
-  French forced; references kept in `dream/references/`, at most 200 a
-  night), aligns pasted/final/reference word by word (`WordAlignment`: LCS,
+  each corpus WAV not yet seen with Cohere Transcribe (`CohereReference`:
+  FluidAudio's Core ML port, 2.1 GB in `fluidaudio/cohere-transcribe/q8`,
+  French forced, audio cut at silences into 4–9 s pieces because the Core ML
+  decoder stops at 99 tokens and silently truncated anything past ~15 s, a
+  lone "Merci." hallucination dropped; references kept in
+  `dream/references/`, at most 200 a night), aligns pasted/final/reference word by word (`WordAlignment`: LCS,
   replaced runs of 1–3 words, plus casing into a canonical spelling like
   `PostHog`), tallies pairs over the whole corpus, keeps those corrected by
   the user at least once or re-heard differently at least twice, drops pairs
@@ -71,9 +72,7 @@ Setup: one button in Settings that installs (or removes) the nightly task.
   `judge_schema.json`; verdicts `dictionary | grammar | rewrite | one_off |
   unsure` with a probability. The prompt (`judge_prompt.md`) asks for
   conservatism: a wrong entry corrupts every future dictation.
-- **Shadow judge**: Jev-Style (local, MLX) via `judge_jev.py` when its venv
-  exists in `dream/jev/venv`; its verdicts are compared, never applied; the
-  report tracks agreement night after night.
+- One re-listener, one judge: the user ruled out stacking models at night.
 - **`parrot dream apply`**: remembers verdicts (`dream/verdicts.json`); a
   `dictionary` verdict at ≥ 0.8 is proposed in the report (copy-ready lines),
   or with `"dream": {"autoApply": true}` written to the dictionary — a backup
@@ -88,23 +87,52 @@ Setup: one button in Settings that installs (or removes) the nightly task.
 
 ### First run (2026-10-01, by hand)
 
-- 95 dictations re-transcribed with `whisper-large-v3-turbo` in ~7 min,
+- 95 dictations re-transcribed with `whisper-large-v3-turbo` (since replaced) in ~7 min,
   model download included (1.6 GB); 11 candidates; Claude: 2 `dictionary`
   (nosamment → notamment, Durama → diorama, both proposed), 7 `one_off`,
   1 `grammar`, 1 `rewrite` — all sensible on reading. ~$0.10 per night.
 - Jev-Style, tested by a sub-agent on 49 synthetic cases: the 0.8B is worse
   than plain rules (68–80 %); the 2B works only as two yes/no questions inside
   rules (93 % / 84 %, but rules alone give 93 % / 74 %). Kept as shadow (2B,
-  MLX 8-bit, 1.9 GB weights + 490 MB venv in `dream/jev/`, 4.5 s a night).
-  On the real candidates it agreed with Claude on **2 of 11** and called both
-  dictionary entries `grammar`: not a replacement for now.
+  MLX 8-bit, 1.9 GB weights + 490 MB venv, 4.5 s a night) for one night:
+  on the real candidates it agreed with Claude on **2 of 11** and called both
+  dictionary entries `grammar`. Removed.
+
+### Which model re-listens (2026-10-01)
+
+Measured against the user's final text (lowercased, no punctuation) on the
+corpus: 22 dictations the user corrected (47 wrong words), 52 left as they
+were. "Flags" = a word of Parakeet's output the re-listener transcribes
+differently.
+
+| Re-listener | WER, corrected ones | Flags: recall / precision | False flags / 100 words |
+|---|---|---|---|
+| Parakeet Ultra (the transcript itself) | 8.6 % | — | — |
+| Whisper large-v3-turbo | 18.9 % | 70 % / 33 % | 18.4 |
+| Parakeet v3 (`.french`) | 14.9 % | 57 % / 30 % | 7.6 |
+| **Cohere Transcribe, 9 s pieces** | 12.9 % | **77 % / 44 %** | 8.9 |
+| Cohere, FluidAudio's default long call | 28.1 % | — | — (truncates 17 of 74 files) |
+
+Whisper-turbo, first chosen because Parrot already had it, was the worst:
+replaced by Cohere and deleted (1.6 GB). Cohere is no better transcript than
+Parakeet — 56 % of its disagreements are its own errors — so it only flags;
+recurrence and the judge decide. Requiring Cohere and Parakeet v3 to agree
+would raise precision to 64 % but the user chose a single model at night.
+Cohere runs ~6× real time plus ~2 min of Neural Engine compilation per run:
+~4 min a night on this corpus. It never drifts out of French (it turned
+Parakeet's Finnish-sounding drift "Voisi mennä tämän oon" back into French).
+
+Side finding, not yet explained: Parakeet Ultra run directly on a corpus WAV
+differs from what the app pasted on 15 of 22 corrected dictations (fixing 6
+errors, adding others; 10.2 % vs 8.6 % WER) — the app's trim and padding
+(`WhisperTuning.prepare`) and the dictionary are the suspects. Worth a bench.
 
 ## 4. Open questions
 
 - After the first week of proposals: are Claude's `dictionary` verdicts
   right? If so, turn on `autoApply`.
-- Does Jev-Style agree with Claude often enough (≥ 95 %) to take over and
-  keep everything on the Mac?
+- A local judge to keep everything on the Mac: Jev-Style failed (§3);
+  revisit with a stronger local model.
 - The job runs Claude Code headless with the user's login, from launchd; a
   failed judge leaves candidates to the next night.
 
