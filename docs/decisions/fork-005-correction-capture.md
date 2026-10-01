@@ -25,9 +25,16 @@ Last updated: `2026.10.01`
   `model`, `app` (bundle id), `pasted`, `final`, `status`
   (`edited` / `unchanged` / `unreadable`), `watched` (seconds). Only the span,
   never the rest of the field. The log says the status, never text.
-- **Read-only Accessibility**: no attribute is ever set on the target app
-  (OpenWhispr's `AXEnhancedUserInterface` took focus away from Claude's input,
-  OpenWhispr #1116; VoiceInk sets `AXManualAccessibility` on Chromium apps).
+- **Accessibility reads, with one write for Electron.** An app that names no
+  focused element is asked to set `AXManualAccessibility` (Electron's
+  documented switch for assistive tools, what VoiceInk does), then looked at
+  again for up to ~5.6 s while Chromium builds its tree. It stays on until
+  Parrot quits (then turned off), and is left alone when it was already on.
+  Never `AXEnhancedUserInterface`, which took focus away from Claude's input
+  (OpenWhispr #1116).
+- **The log names the failing step** for an unreadable field (no focused
+  element, secure field, value unreadable with its AX code, pasted text not
+  found with the field's length): sizes and codes, never text.
 - **Transcript text on disk, deliberately.** Upstream's ADR-004 forbids it
   since 0.0.5 leaked dictations through a world-readable `/tmp` log. The user
   decided to keep it to analyse and improve recognition; it is limited to the
@@ -54,6 +61,31 @@ auto-added words polluted dictionaries and overflowed prompts (#358, #399),
 and its English-only common-word filter would learn French homophone fixes
 (ces→ses, a→à) as words.
 
+First run (2026-10-01), one dictation each: Notes `unchanged`, watched 9 s;
+bb (`dev.bb.desktop`) and Notion (`notion.id`), both Electron: `no focused
+element`. Parrot has Accessibility (its hotkey only starts once
+`AXIsProcessTrusted()`), so the apps, not the grant, were the cause; the same
+dictations logged upstream's `before cursor: unknown`.
+
+Second run: bb took the request (`AX 0`) but answered `-25212` (no value) to
+both focused-element queries for ~2.75 s, while its focused window answered
+at once; turning the attribute off after each watch made every dictation
+wait again. Kept on, later dictations in bb were read at once.
+
+Third run: `edited` records whose `final` was the dictation's first word.
+Cause: alone in its field, a paste is followed only by the space `Spacing`
+adds, so the after-anchor was " " and matched the first space inside the
+span. Whitespace-only anchors now count as the field's ends, and an emptied
+span (a sent message) keeps the last look instead of recording "". The four
+affected records were rewritten as `unreadable`.
+
+Fourth run: bb's emptied input reads as its placeholder ("Ask for a
+follow-up. @ to mention files…", 71 units — also the "71 units, cursor 0"
+of the second run), recorded as the final text. A value equal to the field's
+`AXPlaceholderValue` now counts as empty. Of the two affected records, one
+got its final text back from the message the user sent; the other became
+`unreadable`.
+
 ## 3. Design Implications
 
 - Text typed right after a dictation pasted at the end of a field joins the
@@ -62,6 +94,10 @@ and its English-only common-word filter would learn French homophone fixes
 - Apps that don't expose their text over Accessibility (terminals, some
   Chromium/Electron fields) give `unreadable` with `pasted` only — still a
   draft reference for the audio.
+- While a watch runs in an Electron app, Chromium keeps its accessibility
+  tree: a little CPU and memory in that app for up to a minute. The first
+  dictation in an app may still be unreadable if the tree isn't ready in
+  about 2 s.
 - Up to one Accessibility read per second for a minute after a dictation, on
   the main thread, each bounded by the 0.25 s messaging timeout.
 - Edits are not all transcription errors (the user also rewrites); the data

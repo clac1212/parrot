@@ -24,6 +24,25 @@ final class CorrectionWatchTests: XCTestCase {
         )
     }
 
+    func testWhitespaceIsNoAnchor() {
+        // A dictation alone in its field, with the space Spacing adds after it.
+        let value = "Ok, là je viens de faire une dictée. "
+        let range = CorrectionWatch.locate("Ok, là je viens de faire une dictée.", in: value, cursor: 37)!
+        let anchors = CorrectionWatch.anchors(around: range, in: value)
+        XCTAssertEqual(anchors.before, "")
+        XCTAssertEqual(anchors.after, "")
+        let edited = "Ok, là je viens de faire une seule dictée. "
+        XCTAssertEqual(
+            CorrectionWatch.span(in: edited, before: anchors.before, after: anchors.after, near: range.lowerBound),
+            "Ok, là je viens de faire une seule dictée."
+        )
+    }
+
+    func testAnEmptiedFieldIsNoEdit() {
+        XCTAssertNil(CorrectionWatch.span(in: "", before: "", after: "", near: 0))
+        XCTAssertNil(CorrectionWatch.span(in: " \n", before: "", after: "", near: 0))
+    }
+
     func testEmptyAnchorsAreTheFieldEnds() {
         XCTAssertEqual(CorrectionWatch.span(in: "tout le champ ", before: "", after: "", near: 0), "tout le champ")
         XCTAssertEqual(CorrectionWatch.span(in: "avant: la dictée", before: "avant:", after: "", near: 6), "la dictée")
