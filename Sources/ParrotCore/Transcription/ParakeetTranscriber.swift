@@ -107,8 +107,24 @@ package actor ParakeetTranscriber: ModelTranscriber {
         timings.tokens = result.tokenTimings?.count ?? 0
         // FluidAudio decodes in 15 s windows past that length.
         timings.windows = max(1, Int((audioSeconds / 15).rounded(.up)))
-        let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = Self.clean(result.text)
         return Transcript(text: text, timings: timings)
+    }
+
+    /// Parakeet Ultra emits its unknown token, `<unk>`, where a person would
+    /// write quotes or a dash ("qui dit <unk> mets à jour"): Moondream's
+    /// post-training taught it marks its vocabulary lacks. Parakeet v3, on
+    /// the same audio, writes "-" or nothing (fork-004). Dropped rather than
+    /// guessed: quotes in one sentence, a dash in another. Pure, so it is
+    /// tested.
+    static func clean(_ text: String) -> String {
+        guard text.contains("<unk>") else { return text.trimmingCharacters(in: .whitespacesAndNewlines) }
+        // Before a comma or a period, the token goes with its space
+        // ("blablabla <unk>, en" → "blablabla, en"); elsewhere it leaves one
+        // space. The rest of the text, French spacing included, is untouched.
+        var out = text.replacingOccurrences(of: #" *<unk> *(?=[,.…])"#, with: "", options: .regularExpression)
+        out = out.replacingOccurrences(of: #" *<unk> *"#, with: " ", options: .regularExpression)
+        return out.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// The language code to pass, or nil to let Parakeet choose.

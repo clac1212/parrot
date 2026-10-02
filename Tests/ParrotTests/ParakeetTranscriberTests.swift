@@ -24,4 +24,16 @@ final class ParakeetTranscriberTests: XCTestCase {
         let context = TranscriptionContext(language: nil, spokenLanguages: ["fr", "en"])
         XCTAssertNil(ParakeetTranscriber.language(for: context, model: ultra))
     }
+
+    func testUnknownTokensAreDropped() {
+        XCTAssertEqual(
+            ParakeetTranscriber.clean("Et aussi j'aime bien <unk> je te disais dans mon message là <unk> mais l'interface."),
+            "Et aussi j'aime bien je te disais dans mon message là mais l'interface."
+        )
+        XCTAssertEqual(ParakeetTranscriber.clean("blablabla <unk>, en fonction"), "blablabla, en fonction")
+        XCTAssertEqual(ParakeetTranscriber.clean(" <unk> "), "")
+        // French spacing before ? and ! stays as Parakeet wrote it.
+        XCTAssertEqual(ParakeetTranscriber.clean("Bonjour, ça va ? Super !"), "Bonjour, ça va ? Super !")
+        XCTAssertEqual(ParakeetTranscriber.clean("tu viens <unk> ?"), "tu viens ?")
+    }
 }

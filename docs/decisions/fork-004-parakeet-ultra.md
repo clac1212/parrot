@@ -72,6 +72,36 @@ Options rejected for now:
   FluidAudio's own timings; `fallbacks` is always 0.
 - `parrot-bench transcription` is still Whisper-only.
 
+### `<unk>` in the output (2026-10-02)
+
+Parakeet Ultra sometimes emits its unknown token, pasted as a literal
+`<unk>`, where a person would write quotes or a dash: "quelqu'un qui dit
+<unk> mets à jour la fiche blablabla <unk> en fonction", "j'aime bien <unk>
+je te disais … là <unk> mais". Seen in 3 of 247 corpus dictations; FluidVoice
+(Parakeet v2/v3) had 2 in 3,411. Replaying the three recordings: Ultra
+emits it at the same places with and without the `fr` hint (so not
+FluidAudio's language filter, the first suspect), Parakeet v3 writes "-" or
+nothing there. Cause: Moondream's post-training taught Ultra marks its
+vocabulary lacks. `ParakeetTranscriber.clean` drops the token — with its
+space before a comma or period, else leaving one space — and leaves the rest
+of the text alone (French spacing before `?` and `!` included). Dropped
+rather than guessed: quotes fit one sentence, a dash another.
+
+**Known limit, accepted (2026-10-02).** The mark Ultra meant is lost: the
+model itself doesn't know which one it was, since every character missing
+from its vocabulary («, », “, ”, —) became the same `<unk>` in training.
+Options considered and not taken:
+
+| Option | Why not (for now) |
+|---|---|
+| Guess from context (two `<unk>` around a phrase after "dit" → « … », one alone → —) | A brittle rule whose mistakes are more visible than a missing mark. |
+| Forbid `<unk>` during decoding so the model takes its second choice (v3 put a dash there) | The cleanest: the model chooses, not us. But the candidate list lives inside FluidAudio's decoder — its API returns only the final text, and each choice steers the next ones, so it can't be redone from outside. It needs a change in FluidAudio: a fork of the library to maintain (re-applied on every update), or a pull request upstream. The user judged both too heavy for 3 dictations in 247. |
+| Let the nightly loop learn what the user writes there | `raw` is stored after `clean`, so the marker is gone; and only worth it if a simple rule came out. |
+
+Revisit if `<unk>` becomes frequent (the corpus shows it: grep the `pasted`
+of older records, or count drops by logging them), or if FluidAudio adds a
+way to exclude tokens.
+
 ## 4. When to Revisit
 
 - Release→text after ~20 dictations (latency log) — fill in the table above.
