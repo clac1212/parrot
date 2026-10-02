@@ -59,6 +59,7 @@ step, so they won't feel complexity creep: **it's your job to push back.**
   - [fork-008](docs/decisions/fork-008-pause-media-while-dictating.md) — pause media while dictating, via the vendored MediaRemote adapter
   - [fork-009](docs/decisions/fork-009-nightly-review.md) — learn from the day's dictations ("dreaming"), once a day when the Mac is free: re-listen, find recurring errors, propose dictionary entries
   - [fork-010](docs/decisions/fork-010-menu-bar-panel.md) — a French panel from the menu bar instead of the menu and Settings window
+  - [fork-011](docs/decisions/fork-011-no-per-app-style.md) — **rejected**: per-app style (Slack, Mail…) — no local model fast and faithful enough yet
 
 ## Commands
 
