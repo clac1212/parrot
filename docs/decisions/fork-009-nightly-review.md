@@ -177,10 +177,40 @@ errors, adding others; 10.2 % vs 8.6 % WER) — the app's trim and padding
 - Does the loop converge? The report's per-day share of corrected dictations
   should fall; learned entries that keep getting removed would say the
   thresholds are too loose.
-- A local judge to keep everything on the Mac: Jev-Style failed (§3);
-  revisit with a stronger local model.
+- A local judge, to drop Claude (nothing leaves the Mac, no account, no
+  cost, offline — the condition for "installs and works for 99 %"). Its only
+  value is replacing Claude; it won't judge better. See §6.
 - The job runs Claude Code headless with the user's login, from launchd; a
   failed judge leaves candidates to the next night.
+
+## 6. Parked lead: a local decision model as the judge (2026-10-02)
+
+Decision models score given answers instead of writing text, which is
+exactly the judge's job (dictionary / grammar / rewrite / one-off; keep or
+remove), with a probability.
+
+- **Jev-Style** (community, 0.8B/2B): failed — 2 of 11 agreement with Claude
+  on real candidates (§3).
+- **Kev 1.0** (Jared Palmer, Apache-2.0, https://github.com/jaredpalmer/kev,
+  Qwen3.5/3.8 bases 0.8B–27B, a pointer head with calibrated probabilities,
+  Jev-compatible API, local server on MLX: `uv run --extra serve python -m
+  kev.serve --run jaredpalmer/kev-4b`). On sources it never saw: Kev-4B 82 %
+  accuracy, Kev-0.8B 65 %, Kev-27B 85 % (Jev 86 %). Kev-4B wants a 32 GB Mac;
+  this one has 24 GB.
+- **Not tested.** Claude has judged only 40 candidates, 6 of them
+  `dictionary`: one disagreement would read as 83 % precision, so no test can
+  show the ≥ 95 % needed to replace Claude. The user parked it: the models
+  are first releases, and the loop will have more data in a few weeks.
+- **How to test when revisiting:** have the local judge answer the cases
+  Claude already judged (rebuild their evidence from the corpus), alone and
+  combined with the deterministic signals (count, user edits, phonetic
+  similarity, French-word check); pass if its `dictionary` verdicts agree
+  with Claude's ≥ 95 % (precision) and find most of them (recall); or run it
+  in shadow beside Claude for a few weeks.
+- **Revisit when** Claude has judged a few dozen `dictionary` candidates, or a
+  decision model that fits 24 GB scores clearly higher on new sources.
+- Shipping it to everyone would also mean running it from Swift (MLX Swift),
+  not a Python server.
 
 ## 5. Later
 
