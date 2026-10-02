@@ -24,6 +24,7 @@ final class StatusPopover: NSObject {
         menuBar.statusItem.button?.target = panel
         menuBar.statusItem.button?.action = #selector(toggle)
         installed = panel
+        NightlyTask.sync(corpusEnabled: store.current.corpus.enabled)
         return panel
     }
 

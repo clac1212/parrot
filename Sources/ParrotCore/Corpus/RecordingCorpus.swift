@@ -1,17 +1,18 @@
 import Foundation
 
-/// `settings.json` → `corpus`: keep every dictation's audio, to build a
-/// benchmark of the user's own French (fork-003). Off unless set by hand:
-/// there is no switch in the Settings window.
+/// `settings.json` → `corpus`: keep every dictation's audio and what became
+/// of its text (fork-003, fork-005). On by default since the daily review
+/// learns from it (fork-009); audio is deleted after 30 days. `false` turns
+/// both off.
 struct CorpusSettings: Codable, Equatable {
     /// Keep each capture as a WAV in `Paths.corpus`.
-    var enabled = false
+    var enabled = true
 
     init() {}
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
     }
 }
 
@@ -54,10 +55,10 @@ enum RecordingCorpus {
 
     /// `text` was pasted for the recording `kept`: watch what the user does
     /// with it.
-    static func delivered(_ text: String, kept: String?, model: String) {
+    static func delivered(_ text: String, raw: String, kept: String?, model: String) {
         guard let kept, !text.isEmpty else { return }
         let file = Paths.corpus.appendingPathComponent(kept).appendingPathExtension("json")
-        CorrectionWatch.shared.start(pasted: text, file: file, model: model)
+        CorrectionWatch.shared.start(pasted: text, raw: raw == text ? nil : raw, file: file, model: model)
     }
 
     /// `2026-10-01_10-12-03.wav`, in local time, so files sort by date.

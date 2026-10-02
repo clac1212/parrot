@@ -18,7 +18,10 @@ Last updated: `2026.10.01`
     Permissions…);
   - **Dictée**: Raccourci, Modèle, Langue (the model's languages), Dictionnaire
     (opens the file), Ouvrir au démarrage (in Parrot.app);
-  - **Apprentissage nocturne** (fork-009, now in French);
+  - **Apprentissage** (fork-009): information only — words learned, last
+    run (+added −removed), a link to the report; no switch, no list to
+    review (an accept/refuse list existed for a day, dropped as a
+    non-choice);
   - no scrolling: the panel is as tall as its content (the user found a
     460 pt scroll area too short);
   - Fichier de configuration, Quitter Parrot (and Mises à jour… if the updater

@@ -25,6 +25,9 @@ struct CorrectionRecord: Codable, Equatable {
     var status: Status
     /// How long the span was watched, in seconds.
     var watched: Double
+    /// Parakeet's text before the dictionary and other processors, so the
+    /// review sees which dictionary entries fired (fork-009).
+    var raw: String? = nil
 }
 
 /// Watches the span a transcript was pasted into until the user leaves the
@@ -58,6 +61,7 @@ final class CorrectionWatch {
         let file: URL
         let model: String
         let pasted: String
+        let raw: String?
         let pid: pid_t?
         let element: FocusedElement
         let app: String?
@@ -92,13 +96,13 @@ final class CorrectionWatch {
 
     /// Starts watching `pasted`, delivered for the recording `file`. Ends any
     /// watch still running first.
-    func start(pasted: String, file: URL, model: String) {
+    func start(pasted: String, raw: String?, file: URL, model: String) {
         finish()
         let generation = self.generation
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay) { [weak self] in
             MainActor.assumeIsolated {
                 guard let self, self.generation == generation else { return }
-                self.locate(pasted: pasted, file: file, model: model)
+                self.locate(pasted: pasted, raw: raw, file: file, model: model)
             }
         }
     }
@@ -123,13 +127,13 @@ final class CorrectionWatch {
 
     /// `attempt` counts the looks taken after asking an Electron app for its
     /// accessibility.
-    private func locate(pasted: String, file: URL, model: String, attempt: Int = 0) {
+    private func locate(pasted: String, raw: String?, file: URL, model: String, attempt: Int = 0) {
         let focus = Self.focus()
         let app = focus.pid.flatMap { NSRunningApplication(processIdentifier: $0)?.bundleIdentifier }
         // Which step failed, for the log: never text, only sizes and AX codes.
         func unreadable(_ reason: String) {
             Log.info("  corpus: \(app ?? "unknown app"): \(reason)")
-            Self.write(CorrectionRecord(model: model, app: app, pasted: pasted, final: nil, status: .unreadable, watched: 0), to: file)
+            Self.write(CorrectionRecord(model: model, app: app, pasted: pasted, final: nil, status: .unreadable, watched: 0, raw: raw), to: file)
         }
         guard let element = focus.element else {
             // Diagnostic (fork-005): when, and through which query, the app
@@ -145,7 +149,7 @@ final class CorrectionWatch {
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.retryDelays[attempt]) { [weak self] in
                 MainActor.assumeIsolated {
                     guard let self, self.generation == generation else { return }
-                    self.locate(pasted: pasted, file: file, model: model, attempt: attempt + 1)
+                    self.locate(pasted: pasted, raw: raw, file: file, model: model, attempt: attempt + 1)
                 }
             }
             return
@@ -159,7 +163,7 @@ final class CorrectionWatch {
         }
         let anchors = Self.anchors(around: range, in: value)
         watch = Watch(
-            file: file, model: model, pasted: pasted, pid: focus.pid, element: element, app: app,
+            file: file, model: model, pasted: pasted, raw: raw, pid: focus.pid, element: element, app: app,
             before: anchors.before, after: anchors.after,
             location: range.lowerBound, started: Date(), span: pasted
         )
@@ -251,7 +255,7 @@ final class CorrectionWatch {
         let status: CorrectionRecord.Status = watch.span == watch.pasted ? .unchanged : .edited
         let record = CorrectionRecord(
             model: watch.model, app: watch.app, pasted: watch.pasted, final: watch.span,
-            status: status, watched: (Date().timeIntervalSince(watch.started) * 10).rounded() / 10
+            status: status, watched: (Date().timeIntervalSince(watch.started) * 10).rounded() / 10, raw: watch.raw
         )
         Self.write(record, to: watch.file)
     }

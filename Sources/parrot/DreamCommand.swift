@@ -22,17 +22,16 @@ struct Dream: ParsableCommand {
 
     struct Apply: ParsableCommand {
         static let configuration = CommandConfiguration(
-            abstract: "Remember the judge's verdicts, update or propose dictionary entries, write the report."
+            abstract: "Remember the judge's verdicts, add and remove learned dictionary entries, write the report."
         )
 
         @Option(name: .long, help: "The judge's decisions (JSON).") var judge: String?
-        @Option(name: .long, help: "A shadow judge's decisions, compared but never applied.") var shadow: String?
 
         func run() throws {
             let existing = { (path: String?) in
                 path.map { URL(fileURLWithPath: $0) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
             }
-            try NightlyReview.apply(judge: existing(judge), shadow: existing(shadow))
+            try NightlyReview.apply(judge: existing(judge))
         }
     }
 }

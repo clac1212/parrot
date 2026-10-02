@@ -10,6 +10,28 @@ on-device push-to-talk dictation for macOS. This fork aims at, in order:
 Architecture: `docs/architecture.md` (upstream's, read it first: it says where
 each kind of change belongs). User docs: `README.md`.
 
+## Product rules — opinionated software
+
+Parrot should install, work, and be the best version for 99 % of people who
+never open a setting. The user builds it step by step and understands each
+step, so they won't feel complexity creep: **it's your job to push back.**
+
+- **No new setting, toggle, or choice for the user without a fight.** First
+  find the default that is right for nearly everyone, measure it, ship it.
+  A setting is a decision we failed to make.
+- **The software improves itself; the user does nothing.** Prefer a loop that
+  learns from use and corrects its own mistakes (fork-009) over asking the
+  user to review, accept, or configure. Self-correction is the safety net,
+  not a confirmation dialog.
+- **Before adding a feature, ask:** does it remove a step for the user, or
+  add one? Is it for 99 % of people or for one case? Can it be automatic?
+  If it adds UI, what UI does it remove?
+- **Say so when a request drifts** toward a complex, configurable tool —
+  even a reasonable-sounding one — and propose the simpler, automatic
+  version. Then let the user decide.
+- Information over controls: the UI may show what Parrot did (a status, a
+  report); it should rarely ask the user to act.
+
 ## Fork rules
 
 - **Document everything, as you go.** Every decision lands in
@@ -35,7 +57,7 @@ each kind of change belongs). User docs: `README.md`.
   - [fork-006](docs/decisions/fork-006-transcript-stays-on-clipboard.md) — the transcript stays on the clipboard after the paste
   - [fork-007](docs/decisions/fork-007-built-in-mic-over-bluetooth.md) — the built-in microphone instead of a Bluetooth one (AirPods lose the first ~0.55 s)
   - [fork-008](docs/decisions/fork-008-pause-media-while-dictating.md) — pause media while dictating, via the vendored MediaRemote adapter
-  - [fork-009](docs/decisions/fork-009-nightly-review.md) — learn at night from the day's dictations ("dreaming"): re-listen, find recurring errors, propose dictionary entries
+  - [fork-009](docs/decisions/fork-009-nightly-review.md) — learn from the day's dictations ("dreaming"), once a day when the Mac is free: re-listen, find recurring errors, propose dictionary entries
   - [fork-010](docs/decisions/fork-010-menu-bar-panel.md) — a French panel from the menu bar instead of the menu and Settings window
 
 ## Commands

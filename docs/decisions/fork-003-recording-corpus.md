@@ -10,9 +10,10 @@ Last updated: `2026.10.01`
 
 ## 1. Decision
 
-- **Opt-in, off by default, no switch in the Settings window.** It is a
-  measurement tool, set by hand while the corpus is built. It is read at each
-  release, so it applies without a restart.
+- **On by default since 2026-10-02** (was opt-in): the daily review learns
+  from it (fork-009). Audio older than 30 days is deleted once re-listened
+  to; the text records stay. `"corpus": {"enabled": false}` turns the corpus
+  and the learning off. No switch in the UI. Read at each release.
 - **Audio only, as captured**: 16 kHz mono 16-bit WAV, before the silence
   trim, which is what `parrot-bench transcription` replays through the same
   preparation as the app. One file per dictation, named by local date and time

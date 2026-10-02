@@ -2,12 +2,13 @@ import XCTest
 @testable import ParrotCore
 
 final class RecordingCorpusTests: XCTestCase {
-    func testOffUnlessSet() throws {
-        XCTAssertFalse(CorpusSettings().enabled)
+    func testOnUnlessTurnedOff() throws {
+        // On by default since the daily review learns from it (fork-009).
+        XCTAssertTrue(CorpusSettings().enabled)
         let empty = try JSONDecoder().decode(Settings.self, from: Data("{}".utf8))
-        XCTAssertFalse(empty.corpus.enabled)
-        let on = try JSONDecoder().decode(Settings.self, from: Data(#"{"corpus": {"enabled": true}}"#.utf8))
-        XCTAssertTrue(on.corpus.enabled)
+        XCTAssertTrue(empty.corpus.enabled)
+        let off = try JSONDecoder().decode(Settings.self, from: Data(#"{"corpus": {"enabled": false}}"#.utf8))
+        XCTAssertFalse(off.corpus.enabled)
     }
 
     func testFileNamesSortByDate() {

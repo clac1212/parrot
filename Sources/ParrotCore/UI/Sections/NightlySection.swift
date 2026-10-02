@@ -1,60 +1,53 @@
 import AppKit
 import SwiftUI
 
-/// Apprentissage nocturne (the panel, fork-010; Settings → Learn Overnight before): one button that sets up or removes the nightly
-/// review (fork-009), and what the last night did.
+/// Apprentissage (the panel, fork-010): what the daily review (fork-009) has
+/// done — information, no controls. The loop needs nothing from the user.
 struct NightlySection: View {
     @ObservedObject var store: SettingsStore
-    @State private var installed = NightlyTask.isInstalled
     @State private var state = NightlyReview.State.load()
 
     var body: some View {
-        SettingsGroup("Apprentissage nocturne") {
-            Text("Chaque nuit à 3 h, Parrot relit les dictées du jour, repère les mots qu'il rate souvent et propose des entrées de dictionnaire. Claude juge de courts extraits ; l'audio ne quitte jamais le Mac.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            PillRow("Revue de nuit") {
-                Button(installed ? "Désactiver" : "Activer") {
-                    if installed { NightlyTask.remove() } else { try? NightlyTask.install() }
-                    installed = NightlyTask.isInstalled
+        SettingsGroup("Apprentissage") {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(Self.headline(state))
+                    Text(Self.detail(state, corpus: store.current.corpus.enabled))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .buttonStyle(installed ? .pill : .primaryPill)
-                .disabled(!NightlyTask.isAvailable || !store.current.corpus.enabled)
-            }
-            if installed {
-                PillRow(state.map { "Dernière nuit : \(Self.date($0.lastRun))" } ?? "Pas encore lancée") {
-                    HStack(spacing: 8) {
-                        Button("Lancer") { NightlyTask.runNow() }
-                            .buttonStyle(.pill)
-                        if let report = state?.lastReport {
-                            Button("Rapport") { NSWorkspace.shared.open(URL(fileURLWithPath: report)) }
-                                .buttonStyle(.pill)
-                        }
-                    }
+                Spacer()
+                if let report = state?.lastReport {
+                    Button("Rapport") { NSWorkspace.shared.open(URL(fileURLWithPath: report)) }
+                        .buttonStyle(.pill)
                 }
-            }
-            if !store.current.corpus.enabled {
-                Text("Nécessite le corpus : mets \"corpus\": {\"enabled\": true} dans le fichier de configuration.")
-                    .font(.caption).foregroundStyle(.secondary)
-            } else if !NightlyTask.isAvailable {
-                Text("Installe d'abord les scripts avec scripts/fork-install.sh.")
-                    .font(.caption).foregroundStyle(.secondary)
-            } else if installed {
-                Text(store.current.dream.autoApply
-                     ? "Les entrées sûres vont directement dans le dictionnaire ; chaque changement est sauvegardé."
-                     : "Propositions seulement : les entrées sont listées dans le rapport, pas écrites. Mets \"dream\": {\"autoApply\": true} pour les appliquer.")
-                    .font(.caption).foregroundStyle(.secondary)
             }
         }
+        .onAppear { state = NightlyReview.State.load() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
-            installed = NightlyTask.isInstalled
             state = NightlyReview.State.load()
         }
     }
 
-    private static func date(_ iso: String) -> String {
-        guard let date = ISO8601DateFormatter().date(from: iso) else { return iso }
-        return date.formatted(date: .abbreviated, time: .shortened)
+    /// "Parrot apprend de tes dictées · 6 mots appris".
+    private static func headline(_ state: NightlyReview.State?) -> String {
+        guard let learned = state?.learned, learned > 0 else { return "Parrot apprend de tes dictées" }
+        return "Parrot apprend de tes dictées · \(learned) mot\(learned > 1 ? "s" : "") appris"
+    }
+
+    /// When it last ran and what's next, in one line.
+    private static func detail(_ state: NightlyReview.State?, corpus: Bool) -> String {
+        guard corpus else { return "En pause : le corpus est désactivé dans le fichier de configuration." }
+        let running = FileManager.default.fileExists(atPath: Paths.dream.appendingPathComponent(".lock").path)
+        if running { return "Revue en cours…" }
+        guard let state, let date = ISO8601DateFormatter().date(from: state.lastRun) else {
+            return "Première revue dès que le Mac sera libre, sur secteur."
+        }
+        var parts = ["Dernière revue \(date.formatted(.relative(presentation: .named)))"]
+        if let applied = state.applied, applied > 0 { parts.append("+\(applied)") }
+        if let removed = state.removed, removed > 0 { parts.append("−\(removed)") }
+        if state.judged == false { parts.append("juge indisponible, repris à la prochaine") }
+        return parts.joined(separator: " · ")
     }
 }

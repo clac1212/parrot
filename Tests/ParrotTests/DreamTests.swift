@@ -63,3 +63,82 @@ final class DreamTests: XCTestCase {
         XCTAssertLessThan(FrenchPhonetics.similarity("bonjour", "Vercel"), 0.4)
     }
 }
+
+final class VerdictMemoryTests: XCTestCase {
+    func testExampleShowsBothSides() {
+        XCTAssertEqual(
+            Proposal.example(.init(pasted: "et nosamment le", final: "et notamment le", reference: nil)),
+            "… et nosamment le … → … et notamment le …"
+        )
+    }
+
+    func testPendingSkipsWhatTheDictionaryMaps() {
+        var memory = VerdictMemory()
+        memory.entries["nosamment→notamment"] = .init(verdict: "dictionary", count: 2, date: "2026-10-02")
+        memory.entries["durama→diorama"] = .init(verdict: "dictionary", count: 1, date: "2026-10-02", probability: 0.9, wrong: "Durama", right: "diorama")
+        memory.entries["vrai→ouais"] = .init(verdict: "rewrite", count: 1, date: "2026-10-02")
+        memory.entries["cei→soit"] = .init(verdict: "dictionary", count: 1, date: "2026-10-02", probability: 0.6)
+        let dictionary = UserDictionary(replacements: [.init(from: ["Durama"], to: "diorama")])
+        // Durama is mapped, vrai is no entry, cei is unsure; nosamment counts.
+        XCTAssertEqual(memory.pending(in: dictionary).map(\.key), ["nosamment→notamment"])
+        memory.entries["nosamment→notamment"]?.verdict = VerdictMemory.removed
+        XCTAssertTrue(memory.pending(in: dictionary).isEmpty)
+    }
+
+    func testOneSightingIsNotEnough() {
+        var memory = VerdictMemory()
+        memory.entries["parod→parrot"] = .init(verdict: "dictionary", count: 1, date: "2026-10-02", probability: 0.95)
+        XCTAssertTrue(memory.pending(in: .empty).isEmpty)
+    }
+}
+
+final class LearningLoopTests: XCTestCase {
+    private func record(_ name: String, raw: String?, pasted: String, final: String?, status: String, reference: String? = nil) -> CorpusRecord {
+        CorpusRecord(name: name, wav: URL(fileURLWithPath: "/dev/null"), pasted: pasted, final: final,
+                     status: status, reference: reference, raw: raw)
+    }
+
+    func testAuditCountsWhereALearnedEntryFiredAndWasUndone() {
+        var learned = Learned()
+        learned.entries["la paire→la PR"] = .init(wrong: "la paire", right: "la PR", added: "2026-10-02", createdLine: true)
+        let records = [
+            record("2026-10-02_10-00-00", raw: "regarde la paire", pasted: "regarde la PR", final: "regarde la paire", status: "edited"),
+            record("2026-10-02_11-00-00", raw: "merge la paire", pasted: "merge la PR", final: "merge la PR", status: "unchanged"),
+            record("2026-10-02_12-00-00", raw: "rien", pasted: "rien", final: "rien", status: "unchanged"),
+        ]
+        let audits = NightlyReview.buildAudits(records, learned: learned)
+        XCTAssertEqual(audits.count, 1)
+        XCTAssertEqual(audits[0].fired, 2)
+        XCTAssertEqual(audits[0].userReverted, 1)
+        XCTAssertEqual(audits[0].userKept, 1)
+        XCTAssertEqual(audits[0].id, "a1")
+    }
+
+    func testAnEntryWithoutEvidenceIsNotAudited() {
+        var learned = Learned()
+        learned.entries["nosamment→notamment"] = .init(wrong: "nosamment", right: "notamment", added: "2026-10-02", createdLine: true)
+        let records = [record("2026-10-02_10-00-00", raw: "et nosamment", pasted: "et notamment", final: "et notamment", status: "unchanged")]
+        XCTAssertTrue(NightlyReview.buildAudits(records, learned: learned).isEmpty)
+    }
+
+    func testContainsWholeWordsOnly() {
+        XCTAssertTrue(NightlyReview.contains("Regarde la PR demain", "la pr"))
+        XCTAssertFalse(NightlyReview.contains("la prière", "la pr"))
+    }
+
+    func testReplacesOfALine() {
+        XCTAssertEqual(DictionaryEditor.replaces(of: "Vercel  Versailles, Vercelle"), ["Versailles", "Vercelle"])
+        XCTAssertEqual(DictionaryEditor.replaces(of: "Parakeet"), [])
+        XCTAssertEqual(DictionaryEditor.replaces(of: "Claude Code\tclaude code"), ["claude code"])
+    }
+
+    func testEditRatePerDay() {
+        let rate = Report.editRate([
+            ("2026-10-01_10-00-00", "edited"), ("2026-10-01_11-00-00", "unchanged"),
+            ("2026-10-02_10-00-00", "unchanged"), ("2026-10-02_11-00-00", "unreadable"),
+        ])
+        XCTAssertEqual(rate.map(\.day), ["2026-10-01", "2026-10-02"])
+        XCTAssertEqual(rate.map(\.edited), [1, 0])
+        XCTAssertEqual(rate.map(\.readable), [2, 1])
+    }
+}

@@ -1,11 +1,12 @@
 # Fork ADR-009 :: Learning at night ("dreaming")
 
-Last updated: `2026.10.01` · Status: **built**, first week in proposals-only mode
+Last updated: `2026.10.02` · Status: **built** — a self-correcting loop, nothing asked of the user
 
-> Parrot gets better from use, not from rules written in advance. Each night a
-> job reviews the day's dictations — the audio, what was pasted, what the user
-> kept — finds the errors that recur, and updates the dictionary. Real time
-> stays fast and dumb; judgment happens when there is time for it.
+> Parrot gets better from use, not from rules written in advance, and the
+> user does nothing. Once a day a job reviews the dictations — the audio, what
+> was pasted, what the user kept — adds to the dictionary the mishearings it
+> is sure of, checks whether what it added earlier did harm, and removes it if
+> so. Real time stays fast and dumb; judgment happens when there is time.
 
 ## 1. The stance
 
@@ -73,17 +74,61 @@ Setup: one button in Settings that installs (or removes) the nightly task.
   unsure` with a probability. The prompt (`judge_prompt.md`) asks for
   conservatism: a wrong entry corrupts every future dictation.
 - One re-listener, one judge: the user ruled out stacking models at night.
-- **`parrot dream apply`**: remembers verdicts (`dream/verdicts.json`); a
-  `dictionary` verdict at ≥ 0.8 is proposed in the report (copy-ready lines),
-  or with `"dream": {"autoApply": true}` written to the dictionary — a backup
-  of the file per night in `dream/backups/` and a line in
-  `dream/changelog.md` per change. Writes `dream/reports/<day>.md` (French,
-  numbers and lists, no model writes it).
-- **Schedule**: Settings → Learn Overnight → Turn On writes a launchd agent
-  (`com.clac1212.parrot.dream`, 3:00, runs at wake if missed) that runs
-  `dream/bin/run.sh`; Run Now and Open Report sit beside it. The scripts are
-  installed by `scripts/install-dream.sh` from `fork-install.sh`. Needs the
-  corpus on. Log: `~/Library/Logs/parrot/dream.log`.
+- **`parrot dream apply`** — the loop, with no review by the user:
+  1. remembers the verdicts (`dream/verdicts.json`: pair, verdict,
+     probability, count, an excerpt);
+  2. **removes** learned entries that did harm: each run, `prepare` builds an
+     *audit* for every entry the loop added (`dream/learned.json`) that fired
+     in a dictation — known since corpus records keep Parakeet's text before
+     the dictionary (`raw`) — where the user then changed the replaced word or
+     Cohere heard something else; the judge answers keep or remove (≥ 0.7
+     removes; with no judge, only "undone twice and never kept" does). A
+     removed entry is marked `removed` and never comes back;
+  3. **adds** every `dictionary` verdict with probability ≥ 0.85 **and** seen
+     at least twice that the dictionary doesn't map yet — the two guards that
+     replace the user's review;
+  4. backs up the dictionary once a day (`dream/backups/`), logs each change
+     (`dream/changelog.md`), and writes one report per run
+     (`dream/reports/<day>_<HH-mm>.md`: what was learned and removed, the
+     share of dictations the user corrected per day — the number the loop
+     should bring down — the candidates and audits with their verdicts).
+  It only ever touches entries it added, never the user's own.
+- **Schedule — a daily catch-up, not a fixed hour** (since 2026-10-02):
+  launchd (`com.clac1212.parrot.dream`, from the panel's Activer) only wakes
+  `dream/bin/run.sh` every 30 minutes and at login; the script runs the
+  review when the last successful one is ≥ 20 h old **and** the Mac is free:
+  on AC power and idle (no keyboard or mouse) for 10 minutes — on battery
+  too once nothing ran for 48 h. Otherwise it exits in a fraction of a
+  second. Missed days are caught up naturally: prepare handles every
+  dictation not yet re-listened to. `caffeinate -i` keeps the Mac awake for
+  the run; a lock (`dream/.lock`, stale after 2 h) prevents two at once. The
+  panel's Lancer leaves a `force` file that skips the checks.
+- **Journal** `dream/runs.jsonl`: `started`, `done` (with candidates,
+  proposed, applied; reason "no judge" when Claude didn't answer), `failed`
+  (prepare, judge or apply), `skipped` (in use, on battery — written only
+  when the reason changes). The panel shows the last run, its counts, and
+  "prochaine : dès que le Mac sera libre". Log: `~/Library/Logs/parrot/dream.log`.
+- **No setting, no switch** (2026-10-02): the launchd job is installed at
+  launch whenever the corpus is on (the default) and removed when it's off;
+  the panel's Apprentissage section only says what the loop did ("Parrot
+  apprend de tes dictées · 4 mots appris", last run, +added −removed) and
+  links the report. A first version listed proposals for the user to accept
+  or refuse, with an `autoApply` setting and an on/off button: dropped as a
+  "non-choice" that made the user do the loop's work (CLAUDE.md, Product
+  rules). The cost of an error is bounded instead: a wrong entry lives until
+  the next run's audit, under 24 h of use.
+- The scripts are installed by `scripts/install-dream.sh` from
+  `fork-install.sh`. Needs the corpus on.
+
+### Why not 3:00 (2026-10-02)
+
+The first scheduled night ran from 03:12 to 08:25: launchd started the
+calendar job during one of macOS's 45-second maintenance wakes (lid closed,
+on battery), the Mac went back to sleep, and the run advanced only in those
+wakes until the user opened the lid. A shut-down Mac skips calendar jobs
+entirely. Running at wake instead would compete with the first dictations for
+the Neural Engine (Cohere and Parakeet both use it). A free Mac — plugged in,
+untouched for 10 minutes — is when nobody waits on it.
 
 ### First run (2026-10-01, by hand)
 
@@ -129,8 +174,9 @@ errors, adding others; 10.2 % vs 8.6 % WER) — the app's trim and padding
 
 ## 4. Open questions
 
-- After the first week of proposals: are Claude's `dictionary` verdicts
-  right? If so, turn on `autoApply`.
+- Does the loop converge? The report's per-day share of corrected dictations
+  should fall; learned entries that keep getting removed would say the
+  thresholds are too loose.
 - A local judge to keep everything on the Mac: Jev-Style failed (§3);
   revisit with a stronger local model.
 - The job runs Claude Code headless with the user's login, from launchd; a
