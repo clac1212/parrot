@@ -21,7 +21,9 @@ Last updated: `2026.10.01`
   - **Apprentissage** (fork-009): information only — words learned, last
     run (+added −removed), a link to the report; no switch, no list to
     review (an accept/refuse list existed for a day, dropped as a
-    non-choice);
+    non-choice). The last run is a date ("le 5 oct. à 09:12"), not "il y a
+    3 min": the panel's view is built once and redrawn only when its data
+    changes, so a relative time froze where it was first drawn (2026-10-05);
   - no scrolling: the panel is as tall as its content (the user found a
     460 pt scroll area too short);
   - Fichier de configuration, Quitter Parrot (and Mises à jour… if the updater

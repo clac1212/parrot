@@ -44,7 +44,10 @@ struct NightlySection: View {
         guard let state, let date = ISO8601DateFormatter().date(from: state.lastRun) else {
             return "Première revue dès que le Mac sera libre, sur secteur."
         }
-        var parts = ["Dernière revue \(date.formatted(.relative(presentation: .named)))"]
+        // A date, not "il y a 3 min": the panel isn't redrawn as time
+        // passes, so a relative time would freeze where it was first drawn.
+        let when = date.formatted(.dateTime.day().month(.abbreviated).hour().minute().locale(Locale(identifier: "fr_FR")))
+        var parts = ["Dernière revue le \(when)"]
         if let applied = state.applied, applied > 0 { parts.append("+\(applied)") }
         if let removed = state.removed, removed > 0 { parts.append("−\(removed)") }
         if state.judged == false { parts.append("juge indisponible, repris à la prochaine") }
