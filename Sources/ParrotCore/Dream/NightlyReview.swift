@@ -248,11 +248,12 @@ package enum NightlyReview {
     /// Remembers the verdicts, removes the learned entries the judge found
     /// harmful, adds the ones it found safe, and writes the report. Nothing
     /// asks the user: the next run audits what this one added.
-    package static func apply(judge: URL?) throws {
+    package static func apply(judge: URL?, shadow: URL? = nil) throws {
         let dir = try Paths.prepareDirectory(Paths.dream)
         let input = try? read(DreamCandidates.self, from: dir.appendingPathComponent("candidates.json"))
         let candidates = input?.candidates ?? [], audits = input?.audits ?? []
         let main = judge.flatMap { try? readDecisions($0) }
+        let trial = shadow.flatMap { try? readDecisions($0) }
         let today = Report.day(Date())
 
         var memory = VerdictMemory.load()
@@ -298,10 +299,13 @@ package enum NightlyReview {
         try memory.save()
         try learned.save()
 
+        // The trial judge is compared, never applied (fork-009 §6).
+        let comparison = ShadowTrial.compare(candidates: candidates, audits: audits, main: main, trial: trial)
+        let totals = comparison.flatMap { try? ShadowTrial.record($0) }
         let report = Report.render(
             candidates: candidates, audits: audits, main: main, applied: applied,
             removed: removed, learned: learned
-        )
+        ) + ShadowTrial.section(comparison, totals: totals, trial: trial, candidates: candidates)
         let reports = try Paths.prepareDirectory(dir.appendingPathComponent("reports", isDirectory: true))
         // One report per run, so a second run the same day keeps the first.
         let file = try Paths.preparePrivateFile(reports.appendingPathComponent(Report.stamp(Date()) + ".md"))
@@ -378,6 +382,92 @@ struct DreamAudit: Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case id, key, wrong, right, fired, examples
         case userReverted = "user_reverted", userKept = "user_kept", referenceDisagreed = "reference_disagreed"
+    }
+}
+
+/// A second judge running beside the main one for a trial: the same
+/// candidates, its verdicts compared and counted, nothing applied
+/// (fork-009 §6, Bonsai 2 27B). What decides a switch is the dictionary
+/// additions: would both judges have written the same entries?
+struct ShadowTrial: Codable, Equatable {
+    var runs = 0
+    var compared = 0
+    var sameVerdict = 0
+    /// Additions (dictionary, ≥ acceptProbability, seen ≥ minOccurrences).
+    var addBoth = 0
+    var addMainOnly = 0
+    var addTrialOnly = 0
+    var auditsCompared = 0
+    var auditsSame = 0
+
+    static var file: URL { Paths.dream.appendingPathComponent("shadow.json") }
+
+    /// Nil when either judge is missing.
+    static func compare(candidates: [DreamCandidate], audits: [DreamAudit],
+                        main: DreamDecisions?, trial: DreamDecisions?) -> ShadowTrial? {
+        guard let main, let trial else { return nil }
+        let a = Dictionary(uniqueKeysWithValues: main.decisions.map { ($0.id, $0) })
+        let b = Dictionary(uniqueKeysWithValues: trial.decisions.map { ($0.id, $0) })
+        func adds(_ d: DreamDecision?, _ c: DreamCandidate) -> Bool {
+            guard let d else { return false }
+            return d.verdict == "dictionary" && d.probability >= NightlyReview.acceptProbability
+                && c.count >= NightlyReview.minOccurrences
+        }
+        var run = ShadowTrial(runs: 1)
+        for c in candidates {
+            guard let x = a[c.id], let y = b[c.id] else { continue }
+            run.compared += 1
+            if x.verdict == y.verdict { run.sameVerdict += 1 }
+            switch (adds(x, c), adds(y, c)) {
+            case (true, true): run.addBoth += 1
+            case (true, false): run.addMainOnly += 1
+            case (false, true): run.addTrialOnly += 1
+            case (false, false): break
+            }
+        }
+        let aa = Dictionary(uniqueKeysWithValues: (main.audits ?? []).map { ($0.id, $0.verdict) })
+        let ba = Dictionary(uniqueKeysWithValues: (trial.audits ?? []).map { ($0.id, $0.verdict) })
+        for audit in audits {
+            guard let x = aa[audit.id], let y = ba[audit.id] else { continue }
+            run.auditsCompared += 1
+            if x == y { run.auditsSame += 1 }
+        }
+        return run
+    }
+
+    /// Adds `run` to the running totals; returns them.
+    static func record(_ run: ShadowTrial) throws -> ShadowTrial {
+        var t = (try? NightlyReview.read(ShadowTrial.self, from: file)) ?? ShadowTrial()
+        t.runs += run.runs; t.compared += run.compared; t.sameVerdict += run.sameVerdict
+        t.addBoth += run.addBoth; t.addMainOnly += run.addMainOnly; t.addTrialOnly += run.addTrialOnly
+        t.auditsCompared += run.auditsCompared; t.auditsSame += run.auditsSame
+        try NightlyReview.write(t, to: file)
+        return t
+    }
+
+    /// The report's section; empty when no trial judge ran.
+    static func section(_ run: ShadowTrial?, totals: ShadowTrial?, trial: DreamDecisions?, candidates: [DreamCandidate]) -> String {
+        guard let run, let totals else { return "" }
+        let b = Dictionary(uniqueKeysWithValues: (trial?.decisions ?? []).map { ($0.id, $0) })
+        var out = "\n## Essai : Bonsai (juge local) face à Claude\n\n"
+        out += "Bonsai juge les mêmes candidats ; ses verdicts ne sont jamais appliqués.\n\n"
+        out += "| | Cette revue | Depuis le début |\n|---|---|---|\n"
+        out += "| Même verdict | \(run.sameVerdict)/\(run.compared) | \(totals.sameVerdict)/\(totals.compared) |\n"
+        out += "| Ajouts décidés par les deux | \(run.addBoth) | \(totals.addBoth) |\n"
+        out += "| Ajouts de Claude que Bonsai rate | \(run.addMainOnly) | \(totals.addMainOnly) |\n"
+        out += "| **Ajouts de Bonsai que Claude refuse** | **\(run.addTrialOnly)** | **\(totals.addTrialOnly)** |\n"
+        if totals.auditsCompared > 0 {
+            out += "| Vérifications : même verdict | \(run.auditsSame)/\(run.auditsCompared) | \(totals.auditsSame)/\(totals.auditsCompared) |\n"
+        }
+        out += "\nCritère pour basculer : les ajouts de Bonsai que Claude refuse restent à 0 sur quelques dizaines d'ajouts.\n"
+        if !candidates.isEmpty {
+            out += "\n| Écrit | → Voulu | Bonsai |\n|---|---|---|\n"
+            for c in candidates {
+                let v = b[c.id].map { "\($0.verdict) \(String(format: "%.2f", $0.probability))" } ?? "—"
+                out += "| \(c.wrong) | \(c.right) | \(v) |\n"
+            }
+        }
+        return out
     }
 }
 

@@ -58,11 +58,18 @@ echo "== $(date '+%F %T') review"
 journal started ""
 "$PARROT" dream prepare || { journal failed "prepare"; exit 1; }
 
-rm -f decisions-claude.json
+rm -f decisions-claude.json decisions-bonsai.json
 if grep -q '"id"' candidates.json 2>/dev/null; then
     "$BIN/judge_claude.sh" candidates.json decisions-claude.json || journal failed "judge"
+    # Trial (fork-009 §6): Bonsai judges the same candidates, compared in the
+    # report, never applied. Skipped when it isn't installed.
+    BONSAI="$DREAM/bonsai"
+    if [ -x "$BONSAI/venv/bin/python" ] && [ -f "$BONSAI/model/config.json" ]; then
+        "$BONSAI/venv/bin/python" "$BIN/judge_bonsai.py" candidates.json decisions-bonsai.json \
+            || journal failed "shadow judge"
+    fi
 fi
 
 # Writes the report, state.json and the "done" line of the journal.
-"$PARROT" dream apply --judge decisions-claude.json || { journal failed "apply"; exit 1; }
+"$PARROT" dream apply --judge decisions-claude.json --shadow decisions-bonsai.json || { journal failed "apply"; exit 1; }
 echo "== $(date '+%F %T') done"

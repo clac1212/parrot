@@ -209,6 +209,38 @@ remove), with a probability.
   in shadow beside Claude for a few weeks.
 - **Revisit when** Claude has judged a few dozen `dictionary` candidates, or a
   decision model that fits 24 GB scores clearly higher on new sources.
+
+### Bonsai 2 27B, tested 2026-10-05 — now on trial
+
+PrismML's Bonsai 2 27B (Qwen3.8-27B in ternary weights, Apache-2.0; MLX
+2-bit pack, 8 GB on disk, `mlx-vlm` 0.7.2) is a generative model: it takes
+Claude's exact prompt and schema, unlike a decision model. Tested on the 40
+candidates Claude had judged (evidence rebuilt from the corpus) plus 10
+adversarial cases:
+
+| Setup | Dictionary additions (≥ 0.85, seen ≥ 2) matched | Additions Claude refused | Same verdict overall |
+|---|---|---|---|
+| Reasoning "medium", run 1 / run 2 | 3/3 · 3/3 | 0 · 0 | 68 % · 65 % |
+| No reasoning, run 1 / run 2 | 0/3 · 1/3 | 0 · 1 ("over → hover") | 65 % · 65 % |
+
+Adversarial cases 10/10 in both setups ("la paire → la PR" refused and
+removed when learned; Vercelle, post hog, n huit n accepted; ses/ces, a/à
+grammar). Most disagreements are between verdicts that change nothing
+(one-off, rewrite, unsure). Reasoning is required: without it verdicts
+change between runs. Cost: ~15 min for 40 candidates on a free Mac (12 tok/s
+decode, 73 tok/s prefill), 17 GB peak of 24; 83 min with FluidVoice's own
+model resident (swapping). Only 3 real additions: encouraging, not proof.
+
+**Trial (the user chose it over switching now):** `run.sh` runs
+`judge_bonsai.py` after Claude when `dream/bonsai/{venv,model}` exist;
+`parrot dream apply --shadow` compares (`ShadowTrial`, totals in
+`dream/shadow.json`) and the report gains "Essai : Bonsai face à Claude":
+same verdicts, additions by both, Claude's that Bonsai misses, and **Bonsai's
+that Claude refuses — the number that must stay at 0**. Only Claude's
+verdicts apply. Switch when that holds over a few dozen additions; then
+Claude goes, nothing leaves the Mac. The same model also serves the user's
+own chat: the PrismML kit in `~/Bonsai-demo` (`models/` links to Parrot's
+copy, `.venv-vlm` is an APFS clone, Open WebUI in `.venv`, 2.2 GB).
 - Shipping it to everyone would also mean running it from Swift (MLX Swift),
   not a Python server.
 

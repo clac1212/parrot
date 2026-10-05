@@ -142,3 +142,36 @@ final class LearningLoopTests: XCTestCase {
         XCTAssertEqual(rate.map(\.readable), [2, 1])
     }
 }
+
+final class ShadowTrialTests: XCTestCase {
+    private func candidate(_ id: String, count: Int) -> DreamCandidate {
+        DreamCandidate(id: id, wrong: "w\(id)", right: "r\(id)", count: count, userEdits: 1, referenceHits: 1,
+                       userKept: 0, phonetic: 0.8, wrongIsFrenchWord: false, examples: [])
+    }
+
+    func testCountsAdditionsBothWays() {
+        let cands = [candidate("c1", count: 2), candidate("c2", count: 2), candidate("c3", count: 1), candidate("c4", count: 3)]
+        let main = DreamDecisions(judge: "claude", decisions: [
+            .init(id: "c1", verdict: "dictionary", probability: 0.9),
+            .init(id: "c2", verdict: "dictionary", probability: 0.95),
+            .init(id: "c3", verdict: "dictionary", probability: 0.95),  // seen once: no addition
+            .init(id: "c4", verdict: "one_off", probability: 0.9),
+        ])
+        let trial = DreamDecisions(judge: "bonsai", decisions: [
+            .init(id: "c1", verdict: "dictionary", probability: 0.9),
+            .init(id: "c2", verdict: "one_off", probability: 0.8),
+            .init(id: "c3", verdict: "dictionary", probability: 0.9),
+            .init(id: "c4", verdict: "dictionary", probability: 0.9),
+        ])
+        let run = ShadowTrial.compare(candidates: cands, audits: [], main: main, trial: trial)!
+        XCTAssertEqual(run.compared, 4)
+        XCTAssertEqual(run.sameVerdict, 2)
+        XCTAssertEqual(run.addBoth, 1)
+        XCTAssertEqual(run.addMainOnly, 1)
+        XCTAssertEqual(run.addTrialOnly, 1)
+    }
+
+    func testNoTrialNoComparison() {
+        XCTAssertNil(ShadowTrial.compare(candidates: [], audits: [], main: nil, trial: nil))
+    }
+}
