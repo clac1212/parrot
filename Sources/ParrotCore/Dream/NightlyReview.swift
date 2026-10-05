@@ -396,7 +396,12 @@ struct ShadowTrial: Codable, Equatable {
     /// Additions (dictionary, ≥ acceptProbability, seen ≥ minOccurrences).
     var addBoth = 0
     var addMainOnly = 0
-    var addTrialOnly = 0
+    /// The trial judge adds what the main one judged something else: the
+    /// risk the trial watches — it must stay at 0.
+    var addTrialOnlyDisagree = 0
+    /// Both said dictionary, the main judge below the threshold ("seit →
+    /// soit": Claude 0.80, Bonsai 0.90) — not a disagreement.
+    var addTrialOnlyLessSure = 0
     var auditsCompared = 0
     var auditsSame = 0
 
@@ -421,7 +426,8 @@ struct ShadowTrial: Codable, Equatable {
             switch (adds(x, c), adds(y, c)) {
             case (true, true): run.addBoth += 1
             case (true, false): run.addMainOnly += 1
-            case (false, true): run.addTrialOnly += 1
+            case (false, true):
+                if x.verdict == "dictionary" { run.addTrialOnlyLessSure += 1 } else { run.addTrialOnlyDisagree += 1 }
             case (false, false): break
             }
         }
@@ -439,7 +445,8 @@ struct ShadowTrial: Codable, Equatable {
     static func record(_ run: ShadowTrial) throws -> ShadowTrial {
         var t = (try? NightlyReview.read(ShadowTrial.self, from: file)) ?? ShadowTrial()
         t.runs += run.runs; t.compared += run.compared; t.sameVerdict += run.sameVerdict
-        t.addBoth += run.addBoth; t.addMainOnly += run.addMainOnly; t.addTrialOnly += run.addTrialOnly
+        t.addBoth += run.addBoth; t.addMainOnly += run.addMainOnly
+        t.addTrialOnlyDisagree += run.addTrialOnlyDisagree; t.addTrialOnlyLessSure += run.addTrialOnlyLessSure
         t.auditsCompared += run.auditsCompared; t.auditsSame += run.auditsSame
         try NightlyReview.write(t, to: file)
         return t
@@ -455,11 +462,12 @@ struct ShadowTrial: Codable, Equatable {
         out += "| Même verdict | \(run.sameVerdict)/\(run.compared) | \(totals.sameVerdict)/\(totals.compared) |\n"
         out += "| Ajouts décidés par les deux | \(run.addBoth) | \(totals.addBoth) |\n"
         out += "| Ajouts de Claude que Bonsai rate | \(run.addMainOnly) | \(totals.addMainOnly) |\n"
-        out += "| **Ajouts de Bonsai que Claude refuse** | **\(run.addTrialOnly)** | **\(totals.addTrialOnly)** |\n"
+        out += "| Ajouts de Bonsai, Claude du même avis mais moins sûr | \(run.addTrialOnlyLessSure) | \(totals.addTrialOnlyLessSure) |\n"
+        out += "| **Ajouts de Bonsai que Claude juge autrement** | **\(run.addTrialOnlyDisagree)** | **\(totals.addTrialOnlyDisagree)** |\n"
         if totals.auditsCompared > 0 {
             out += "| Vérifications : même verdict | \(run.auditsSame)/\(run.auditsCompared) | \(totals.auditsSame)/\(totals.auditsCompared) |\n"
         }
-        out += "\nCritère pour basculer : les ajouts de Bonsai que Claude refuse restent à 0 sur quelques dizaines d'ajouts.\n"
+        out += "\nCritère pour basculer : les ajouts de Bonsai que Claude juge autrement restent à 0 sur quelques dizaines d'ajouts.\n"
         if !candidates.isEmpty {
             out += "\n| Écrit | → Voulu | Bonsai |\n|---|---|---|\n"
             for c in candidates {

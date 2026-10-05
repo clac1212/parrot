@@ -235,8 +235,11 @@ model resident (swapping). Only 3 real additions: encouraging, not proof.
 `judge_bonsai.py` after Claude when `dream/bonsai/{venv,model}` exist;
 `parrot dream apply --shadow` compares (`ShadowTrial`, totals in
 `dream/shadow.json`) and the report gains "Essai : Bonsai face à Claude":
-same verdicts, additions by both, Claude's that Bonsai misses, and **Bonsai's
-that Claude refuses — the number that must stay at 0**. Only Claude's
+same verdicts, additions by both, Claude's that Bonsai misses, Bonsai's where
+Claude agreed but below the threshold, and **Bonsai's that Claude judged
+otherwise — the number that must stay at 0**. (Split on 2026-10-05: the first
+trial run counted "seit → soit" — Claude dictionary 0.80, Bonsai 0.90 — as a
+refusal, and the user found Bonsai's addition right.) Only Claude's
 verdicts apply. Switch when that holds over a few dozen additions; then
 Claude goes, nothing leaves the Mac. The same model also serves the user's
 own chat: the PrismML kit in `~/Bonsai-demo` (`models/` links to Parrot's
