@@ -1,1 +1,1 @@
-Vendored from https://github.com/ungive/mediaremote-adapter at 29718252613a5b0e210bdc64de0bd944ab379706 (BSD-3-Clause). Only src/, include/, bin/ and LICENSE. Built by scripts/build-mediaremote.sh (fork-008).
+Vendored from https://github.com/ungive/mediaremote-adapter at 29718252613a5b0e210bdc64de0bd944ab379706 (BSD-3-Clause). Only src/, include/, bin/ and LICENSE. Built into Parrot.app by scripts/fork-resources.sh (fork-008, fork-012).

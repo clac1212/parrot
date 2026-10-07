@@ -14,7 +14,7 @@ package enum ModelRegistry {
             whisperKitID: "openai_whisper-base.en",
             sizeMB: 145,
             languages: ["en"],
-            recommended: true
+            recommended: false  // fork-012: Parakeet Ultra is the default
         ),
         TranscriptionModel(
             id: "whisper-large-v3-turbo",
@@ -53,7 +53,7 @@ package enum ModelRegistry {
             sizeMB: 603,
             languages: ["bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it",
                         "lt", "lv", "mt", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk"],
-            recommended: false
+            recommended: true
         ),
     ]
 

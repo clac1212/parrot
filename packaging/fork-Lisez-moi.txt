@@ -1,0 +1,49 @@
+Parrot — la version de César
+Dictée vocale en français : la reconnaissance tourne sur ton Mac.
+
+
+INSTALLER
+
+1. Glisse Parrot dans le dossier Applications.
+   (Si tu as déjà Parrot, cette version le remplace.)
+
+2. Ouvre Parrot. macOS refuse de l'ouvrir : c'est normal, l'app n'est pas
+   passée par la vérification d'Apple. Va dans Réglages Système →
+   Confidentialité et sécurité, descends en bas et clique sur
+   « Ouvrir quand même ». Une seule fois.
+
+3. Parrot te demande le Micro et l'Accessibilité (pour coller le texte là
+   où tu écris) : accepte les deux. Il télécharge ensuite son modèle de
+   reconnaissance, environ 600 Mo, une seule fois.
+
+
+UTILISER
+
+Maintiens la touche fn (ou celle choisie au premier lancement), parle,
+relâche : le texte arrive là où est ton curseur, et reste aussi dans le
+presse-papier. L'oiseau dans la barre des menus ouvre le panneau.
+
+
+CE QUE PARROT GARDE
+
+Tes dictées (le son et le texte, avec tes corrections) restent sur ton Mac,
+dans ~/Library/Application Support/parrot/corpus. Le son est effacé au bout
+de 30 jours.
+
+
+IL APPREND TOUT SEUL
+
+Une fois par jour, quand ton Mac est branché et que tu ne t'en sers pas,
+Parrot réécoute tes dictées et apprend les mots qu'il rate (il télécharge
+pour ça un second modèle, environ 2 Go, à la première fois).
+
+Pour décider quels mots apprendre, il demande à Claude Code, s'il est
+installé sur ton Mac et connecté (lance « claude » une fois dans le
+Terminal pour te connecter). Il lui envoie alors de courts extraits de tes
+dictées, sous ton compte. Sans Claude Code, Parrot marche pareil : il
+n'apprend simplement pas de nouveaux mots.
+
+
+MISES À JOUR
+
+Pas automatiques : César t'enverra une nouvelle version.

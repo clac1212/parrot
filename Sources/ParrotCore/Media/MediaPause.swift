@@ -3,7 +3,7 @@ import Foundation
 
 extension Paths {
     /// `~/Library/Application Support/parrot/mediaremote` — the MediaRemote
-    /// adapter built by `scripts/build-mediaremote.sh` (fork-008).
+    /// adapter the app carries and copies here at launch (fork-008, fork-012).
     static var mediaRemote: URL { appSupport.appendingPathComponent("mediaremote", isDirectory: true) }
 }
 
@@ -42,7 +42,7 @@ final class MediaPause {
         guard FileManager.default.fileExists(atPath: Self.script.path),
               FileManager.default.fileExists(atPath: Self.framework.path)
         else {
-            Log.info("media: adapter not installed (scripts/build-mediaremote.sh); media won't pause while dictating")
+            Log.info("media: adapter not installed; media won't pause while dictating")
             return nil
         }
         startStream()

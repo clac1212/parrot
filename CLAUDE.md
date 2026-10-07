@@ -60,6 +60,7 @@ step, so they won't feel complexity creep: **it's your job to push back.**
   - [fork-009](docs/decisions/fork-009-nightly-review.md) — learn from the day's dictations ("dreaming"), once a day when the Mac is free: re-listen, find recurring errors, propose dictionary entries
   - [fork-010](docs/decisions/fork-010-menu-bar-panel.md) — a French panel from the menu bar instead of the menu and Settings window
   - [fork-011](docs/decisions/fork-011-no-per-app-style.md) — **rejected**: per-app style (Slack, Mail…) — no local model fast and faithful enough yet
+  - [fork-012](docs/decisions/fork-012-one-app-to-share.md) — one DMG to give to a friend: the app carries the review scripts and media adapter, Parakeet Ultra by default
 
 ## Commands
 
@@ -69,6 +70,7 @@ copy-paste, and trailing punctuation has broken commands before.
 ```sh
 swift build -c release && swift test   # build and unit tests (Xcode required for XCTest)
 scripts/fork-install.sh                # build, sign with Apple Development, install over /Applications/Parrot.app, restart it
+scripts/fork-dmg.sh                    # a DMG for a friend (fork-012), in build/; commit first
 tail -50 ~/Library/Logs/parrot/parrot.err.log   # app log: timings, never text
 ```
 

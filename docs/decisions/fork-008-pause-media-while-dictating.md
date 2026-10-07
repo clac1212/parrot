@@ -19,12 +19,14 @@ Last updated: `2026.10.01`
   it: `/usr/bin/perl`, which is entitled, loads a small framework that talks
   to MediaRemote. Parrot keeps one `stream --no-diff` process running for the
   current state, and runs `send 1` (pause) / `send 0` (play) per dictation.
-- **Built at install, outside the app bundle.**
-  `scripts/build-mediaremote.sh` (run by `fork-install.sh`) compiles the
-  framework with clang, signs it ad hoc, and installs it with the script in
-  `~/Library/Application Support/parrot/mediaremote`. Not linked into
-  Parrot, so Parrot's signature and upstream's `build-app.sh` are untouched.
-  Without it, `MediaPause` logs once and stays off.
+- **Carried by the app, run from outside it** (since fork-012, 2026-10-07;
+  first built by a separate install script).
+  `scripts/fork-resources.sh`, called by `build-app.sh`, compiles the
+  framework with clang and puts it with the script in
+  `Parrot.app/Contents/Resources/fork/mediaremote`; Parrot copies both at
+  launch to `~/Library/Application Support/parrot/mediaremote`, where perl
+  loads it. Not linked into Parrot. Without it, `MediaPause` logs once and
+  stays off.
 - No setting: on whenever the adapter is installed.
 
 ## 2. Rationale

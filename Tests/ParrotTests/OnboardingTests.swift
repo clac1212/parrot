@@ -63,7 +63,11 @@ final class OnboardingTests: XCTestCase {
     }
 
     func testAnotherLanguageMovesAnEnglishOnlyModelToSmall() {
-        XCTAssertEqual(Onboarding.apply(hotkey: .fn, languages: ["en", "es"], preferred: ["en"], to: Settings()).model.id, "whisper-small")
+        var base = Settings()
+        base.model.id = "whisper-base.en"
+        XCTAssertEqual(Onboarding.apply(hotkey: .fn, languages: ["en", "es"], preferred: ["en"], to: base).model.id, "whisper-small")
+        // fork-012: the default, Parakeet Ultra, hears both; it stays.
+        XCTAssertNil(Onboarding.apply(hotkey: .fn, languages: ["fr"], preferred: ["fr"], to: Settings()).model.id)
         var turbo = Settings()
         turbo.model.id = "whisper-large-v3-turbo"
         XCTAssertEqual(Onboarding.apply(hotkey: .fn, languages: ["es"], preferred: ["en"], to: turbo).model.id, "whisper-large-v3-turbo")

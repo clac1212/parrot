@@ -12,6 +12,9 @@
 #
 #   PARROT_SIGN_IDENTITY  overrides the identity (default: the first Apple Development one)
 #   PARROT_LINK_DIR       passed through (default /usr/local/bin; empty skips the link)
+#
+# The review scripts and the media adapter are built into the app
+# (scripts/fork-resources.sh) and installed by it at launch (fork-012).
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -26,10 +29,5 @@ if [ -z "$IDENTITY" ]; then
     echo "  https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer" >&2
     exit 1
 fi
-
-# Pausing media while dictating (fork-008).
-scripts/build-mediaremote.sh
-# The nightly review's scripts (fork-009).
-scripts/install-dream.sh
 
 PARROT_SIGN_IDENTITY="$IDENTITY" exec scripts/dev-install.sh

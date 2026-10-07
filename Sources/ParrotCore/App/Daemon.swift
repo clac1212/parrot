@@ -102,6 +102,7 @@ public enum Daemon {
         let menuBar = MenuBarController(modelID: model.id)
         let settingsWindow = SettingsWindow(store: settings)
         menuBar.onOpenSettings = { settingsWindow.show() }
+        ForkResources.install()  // fork-012: the review scripts and media adapter the app carries
         StatusPopover.install(on: menuBar, store: settings)  // fork-010: a French panel instead of the menu
         menuBar.setHotkey(monitor.key)
         // Parrot.app sets up the hotkey, languages and permissions, and

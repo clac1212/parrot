@@ -83,6 +83,9 @@ else
     TIMESTAMP="--timestamp=none"
 fi
 
+# Fork (fork-012): the review scripts and media adapter, inside the app.
+scripts/fork-resources.sh "$APP" "$SIGN_AS"
+
 # Inside-out: each nested bundle before the one that contains it, as in
 # Sparkle's documentation. Downloader.xpc keeps its entitlements.
 SPARKLE="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"

@@ -9,7 +9,7 @@ DREAM="$HOME/Library/Application Support/parrot/dream"
 BIN="$DREAM/bin"
 PARROT=/Applications/Parrot.app/Contents/MacOS/parrot
 JOURNAL="$DREAM/runs.jsonl"
-export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+export PATH="$HOME/.local/bin:$HOME/.claude/local:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 cd "$DREAM" || exit 1
 
 # Overridable for testing.
@@ -60,6 +60,12 @@ journal started ""
 
 rm -f decisions-claude.json decisions-bonsai.json
 if grep -q '"id"' candidates.json 2>/dev/null; then
+    # Claude Code outside the usual places (nvm, volta…, set up in the
+    # user's .zshrc): ask the user's own shell where it is.
+    if ! command -v claude >/dev/null; then
+        found=$(/bin/zsh -lic 'command -v claude' </dev/null 2>/dev/null | tail -1)
+        [ -x "$found" ] && PATH="$(dirname "$found"):$PATH"
+    fi
     "$BIN/judge_claude.sh" candidates.json decisions-claude.json || journal failed "judge"
     # Trial (fork-009 §6): Bonsai judges the same candidates, compared in the
     # report, never applied. Skipped when it isn't installed.

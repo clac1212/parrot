@@ -117,8 +117,11 @@ Setup: one button in Settings that installs (or removes) the nightly task.
   "non-choice" that made the user do the loop's work (CLAUDE.md, Product
   rules). The cost of an error is bounded instead: a wrong entry lives until
   the next run's audit, under 24 h of use.
-- The scripts are installed by `scripts/install-dream.sh` from
-  `fork-install.sh`. Needs the corpus on.
+- The scripts travel in `Parrot.app/Contents/Resources/fork/dream` and the
+  app copies them to `dream/bin` at each launch (fork-012). Needs the corpus
+  on. `run.sh` finds Claude Code in its usual places, else asks the user's
+  own shell (`zsh -lic 'command -v claude'`, for nvm and the like); without
+  it the run is "no judge" and nothing is added.
 
 ### Why not 3:00 (2026-10-02)
 
