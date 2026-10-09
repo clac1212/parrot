@@ -133,7 +133,12 @@ extension NotchOverlay: DictationObserver {
     }
 
     func dictationFinished(_ result: DictationResult) {
-        hide()
+        // Kept on the clipboard instead of pasted (fork-013): say so.
+        if let notice = PendingDictations.shared.takeNotice() {
+            showMessage(notice)
+        } else {
+            hide()
+        }
     }
 
     func dictationFailed(_ error: Error) {

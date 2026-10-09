@@ -23,6 +23,11 @@ Maintiens la touche fn (ou celle choisie au premier lancement), parle,
 relâche : le texte arrive là où est ton curseur, et reste aussi dans le
 presse-papier. L'oiseau dans la barre des menus ouvre le panneau.
 
+Tu dictes ailleurs que dans un champ de texte (en relisant une page web,
+par exemple) ? Tes dictées s'ajoutent les unes aux autres dans le
+presse-papier, et l'encoche te dit combien sont en attente : ⌘V dans
+n'importe quel champ colle le tout.
+
 
 CE QUE PARROT GARDE
 

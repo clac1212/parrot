@@ -53,10 +53,20 @@ final class TextDelivery {
         let now = FocusSnapshot.capture()
         switch DeliveryDecision.decide(start: focusAtStart, now: now) {
         case .inject:
+            // Fork (fork-013): no text field here, it waits on the clipboard;
+            // in a field, the dictations waiting go first.
+            let pasted: String
+            switch PendingDictations.shared.route(text, focus: now) {
+            case .clipboard(let block):
+                injector.copyToClipboard(block)
+                return
+            case .field(let withWaiting):
+                pasted = withWaiting
+            }
             let before = now.element?.textBeforeCursor() ?? .unknown
-            let spaced = Spacing.spaced(text, before: before)
+            let spaced = Spacing.spaced(pasted, before: before)
             // The kind of character only: the log never carries text.
-            Log.info("  before cursor: \(before.kind)\(spaced.first == " " && text.first != " " ? " · leading space" : "")")
+            Log.info("  before cursor: \(before.kind)\(spaced.first == " " && pasted.first != " " ? " · leading space" : "")")
             injector.inject(spaced)
         case .discardSecure:
             let when = focusAtStart?.isSecure == true ? "recording start" : "delivery"
