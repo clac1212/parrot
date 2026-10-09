@@ -33,8 +33,7 @@ de 30 jours.
 
 IL APPREND TOUT SEUL
 
-Une fois par jour, quand ton Mac est branché et que tu ne t'en sers pas,
-Parrot réécoute tes dictées et apprend les mots qu'il rate (il télécharge
+Une fois par jour, quand ton Mac est branché, Parrot réécoute tes dictées et apprend les mots qu'il rate (il télécharge
 pour ça un second modèle, environ 2 Go, à la première fois).
 
 Pour décider quels mots apprendre, il demande à Claude Code, s'il est

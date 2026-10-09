@@ -1,8 +1,9 @@
 #!/bin/bash
 # The nightly review (fork-009), checked by launchd every 30 minutes.
-# Runs at most once per 20 h, when the Mac is free: on AC power and idle for
-# 10 minutes — or on battery too once nothing ran for 48 h. "Run Now" in the
-# panel leaves a `force` file that skips the checks.
+# Runs at most once per 20 h, on AC power — or on battery too once nothing
+# ran for 48 h — even while the Mac is in use: measured 2026-10-09, it
+# doesn't slow dictation enough to notice (fork-009). A `force` file skips
+# the checks.
 # prepare (Cohere re-listens) → judge (Claude) → apply. Journal: runs.jsonl.
 set -uo pipefail
 DREAM="$HOME/Library/Application Support/parrot/dream"
@@ -15,7 +16,6 @@ cd "$DREAM" || exit 1
 # Overridable for testing.
 DUE_HOURS=${DREAM_DUE_HOURS:-20}
 OVERDUE_HOURS=${DREAM_OVERDUE_HOURS:-48}
-IDLE_SECONDS=${DREAM_IDLE_SECONDS:-600}
 
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 journal() { printf '{"at":"%s","result":"%s","reason":"%s"}\n' "$(now)" "$1" "$2" >> "$JOURNAL"; }
@@ -38,8 +38,6 @@ if [ -f force ]; then
 else
     hours=$(hours_since_last_run)
     [ "$hours" -lt "$DUE_HOURS" ] && exit 0
-    idle=$(ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print int($NF/1000000000); exit}')
-    [ "${idle:-0}" -lt "$IDLE_SECONDS" ] && skip "in use"
     if ! pmset -g batt | head -1 | grep -q "AC Power" && [ "$hours" -lt "$OVERDUE_HOURS" ]; then
         skip "on battery"
     fi

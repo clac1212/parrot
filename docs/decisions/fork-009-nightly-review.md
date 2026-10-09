@@ -96,18 +96,17 @@ Setup: one button in Settings that installs (or removes) the nightly task.
 - **Schedule — a daily catch-up, not a fixed hour** (since 2026-10-02):
   launchd (`com.clac1212.parrot.dream`, from the panel's Activer) only wakes
   `dream/bin/run.sh` every 30 minutes and at login; the script runs the
-  review when the last successful one is ≥ 20 h old **and** the Mac is free:
-  on AC power and idle (no keyboard or mouse) for 10 minutes — on battery
-  too once nothing ran for 48 h. Otherwise it exits in a fraction of a
-  second. Missed days are caught up naturally: prepare handles every
+  review when the last successful one is ≥ 20 h old **and** the Mac is on
+  AC power — on battery too once nothing ran for 48 h — whether or not it is
+  in use (see "Running while the Mac is in use" below). Otherwise it exits
+  in a fraction of a second. Missed days are caught up naturally: prepare handles every
   dictation not yet re-listened to. `caffeinate -i` keeps the Mac awake for
   the run; a lock (`dream/.lock`, stale after 2 h) prevents two at once. The
   panel's Lancer leaves a `force` file that skips the checks.
 - **Journal** `dream/runs.jsonl`: `started`, `done` (with candidates,
   proposed, applied; reason "no judge" when Claude didn't answer), `failed`
-  (prepare, judge or apply), `skipped` (in use, on battery — written only
-  when the reason changes). The panel shows the last run, its counts, and
-  "prochaine : dès que le Mac sera libre". Log: `~/Library/Logs/parrot/dream.log`.
+  (prepare, judge or apply), `skipped` (on battery — written only when the
+  reason changes). The panel shows the last run and its counts. Log: `~/Library/Logs/parrot/dream.log`.
 - **No setting, no switch** (2026-10-02): the launchd job is installed at
   launch whenever the corpus is on (the default) and removed when it's off;
   the panel's Apprentissage section only says what the loop did ("Parrot
@@ -132,6 +131,28 @@ wakes until the user opened the lid. A shut-down Mac skips calendar jobs
 entirely. Running at wake instead would compete with the first dictations for
 the Neural Engine (Cohere and Parakeet both use it). A free Mac — plugged in,
 untouched for 10 minutes — is when nobody waits on it.
+
+### Running while the Mac is in use (2026-10-09)
+
+The "free Mac" rule (on AC **and** idle 10 minutes) ran nothing from
+2026-10-06 to 10-09. The power log showed why: the user's screen never went
+off by itself in those days — lid open, the Mac is in use; lid closed, it
+sleeps (on battery at night, with 2-second maintenance wakes). The two runs
+that happened were evenings left open on AC.
+
+Measured by forcing a run while the user dictated, against 181 dictations of
+the three days before (141 ms + 5.4 ms per second of audio; each dictation
+compared with that expectation, median ratio 0.86):
+
+| During | Dictations | Median ratio | |
+|---|---|---|---|
+| Cohere re-listening (Neural Engine), 16 min for 175 dictations | 11 | 0.84 | no change |
+| Bonsai's trial (GPU, peak 16.3 GB), 17 min for 33 candidates | 15 | 1.74 | ~2× slower: ~180 → ~340 ms, max 547 ms |
+
+The user felt neither ("aucune gêne") and chose to run all three steps
+while working. The idle check is gone; AC power (or 48 h overdue) stays, for
+the battery. If dictation feels slow during a review, Bonsai is the first
+suspect: run it only when idle, or end the trial.
 
 ### First run (2026-10-01, by hand)
 

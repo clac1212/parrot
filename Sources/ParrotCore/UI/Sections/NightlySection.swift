@@ -42,7 +42,7 @@ struct NightlySection: View {
         let running = FileManager.default.fileExists(atPath: Paths.dream.appendingPathComponent(".lock").path)
         if running { return "Revue en cours…" }
         guard let state, let date = ISO8601DateFormatter().date(from: state.lastRun) else {
-            return "Première revue dès que le Mac sera libre, sur secteur."
+            return "Première revue la prochaine fois que le Mac sera sur secteur."
         }
         // A date, not "il y a 3 min": the panel isn't redrawn as time
         // passes, so a relative time would freeze where it was first drawn.

@@ -2,8 +2,8 @@ import Foundation
 
 /// The launchd job of the nightly review (fork-009), set up and removed from
 /// the panel. launchd only wakes `run.sh` every 30 minutes (and at login);
-/// the script decides whether to run: once per 20 h, when the Mac is on AC
-/// power and idle for 10 minutes (on battery too past 48 h).
+/// the script decides whether to run: once per 20 h, on AC power (on
+/// battery too past 48 h), in use or not.
 enum NightlyTask {
     static let label = "com.clac1212.parrot.dream"
     static var plist: URL { Paths.launchAgentPlist(label: label) }
