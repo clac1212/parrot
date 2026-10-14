@@ -44,6 +44,12 @@ final class PendingDictations {
         return .clipboard(block)
     }
 
+    /// No block waits, or the one waiting has expired.
+    var isEmpty: Bool {
+        guard let last, !texts.isEmpty else { return true }
+        return Date().timeIntervalSince(last) > Self.expiry
+    }
+
     /// `text` with the waiting block before it, which then starts over.
     func flush(_ text: String, at date: Date) -> String {
         defer { clear() }

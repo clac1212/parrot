@@ -62,6 +62,7 @@ step, so they won't feel complexity creep: **it's your job to push back.**
   - [fork-011](docs/decisions/fork-011-no-per-app-style.md) — **rejected**: per-app style (Slack, Mail…) — no local model fast and faithful enough yet
   - [fork-012](docs/decisions/fork-012-one-app-to-share.md) — one DMG to give to a friend: the app carries the review scripts and media adapter, Parakeet Ultra by default
   - [fork-013](docs/decisions/fork-013-pending-dictations.md) — dictations said outside a text field gather on the clipboard, a paragraph each; ⌘V or the next dictation in a field pastes the block
+  - [fork-014](docs/decisions/fork-014-capitalization-follows-the-cursor.md) — the first letter follows the text before the cursor: small in mid-sentence, capital after one
 
 ## Commands
 

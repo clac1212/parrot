@@ -151,7 +151,7 @@ public enum Daemon {
         let controller = DictationController(
             capture: capture,
             transcriber: transcriber,
-            processors: [DictionaryProcessor(store: dictionary)],
+            processors: [DictionaryProcessor(store: dictionary), CapitalizationProcessor(store: dictionary)],  // fork-014
             observers: observers,
             dumpWav: options.dumpWav,
             delivery: TextDelivery(mode: options.injectMode),
