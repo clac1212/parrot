@@ -16,8 +16,9 @@ Last updated: `2026.10.01`
     "● Enregistrement…", "Parakeet Ultra · chargement de …"), and an
     *Autoriser…* button while a permission is missing (the menu's Grant
     Permissions…);
-  - **Dictée**: Raccourci, Modèle, Langue (the model's languages), Dictionnaire
-    (opens the file), Ouvrir au démarrage (in Parrot.app);
+  - **Dernières dictées** (fork-015): the last 24 h, each with a copy button;
+  - **Dictée**: Raccourci, Dictionnaire (opens the file), Ouvrir au
+    démarrage (in Parrot.app); no Modèle nor Langue since fork-016;
   - **Apprentissage** (fork-009): information only — words learned, last
     run (+added −removed), a link to the report; no switch, no list to
     review (an accept/refuse list existed for a day, dropped as a

@@ -44,9 +44,10 @@ public enum Daemon {
     public static func run(_ options: DaemonOptions) throws {
         // ArgumentParser calls run() on the main thread.
         let settings = MainActor.assumeIsolated { SettingsStore() }
-        let savedModel = MainActor.assumeIsolated { settings.current.model.id }
+        // Fork (fork-016): one model, the recommended one, whatever settings
+        // say; `--model` stays for benches and tests.
         let chosenModel = try Startup.check(
-            modelID: options.model ?? Self.knownModel(savedModel),
+            modelID: options.model,
             hotkey: options.hotkey,
             skipDoctor: options.skipDoctor
         )
@@ -135,7 +136,8 @@ public enum Daemon {
         let dictionaryContext = {
             var context = DictionaryContext(
                 store: dictionary,
-                language: DictionaryContext.language(of: switcher.model, setting: settings.current.language.code),
+                // Fork (fork-016): no Language choice; the Mac's languages decide.
+                language: DictionaryContext.language(of: switcher.model, setting: nil),
                 examples: settings.current.dictionary.examples
             ).context()
             context.spokenLanguages = settings.current.language.spoken ?? []
@@ -151,7 +153,7 @@ public enum Daemon {
         let controller = DictationController(
             capture: capture,
             transcriber: transcriber,
-            processors: [DictionaryProcessor(store: dictionary), CapitalizationProcessor(store: dictionary)],  // fork-014
+            processors: [DictionaryProcessor(store: dictionary), CapitalizationProcessor(store: dictionary), HistoryProcessor()],  // fork-014, fork-015
             observers: observers,
             dumpWav: options.dumpWav,
             delivery: TextDelivery(mode: options.injectMode),
@@ -173,13 +175,6 @@ public enum Daemon {
                     menuBar.setHotkey(new.hotkey.key)
                     Log.info("hotkey: \(new.hotkey.key.rawValue); hold \(new.hotkey.key.shortName) to dictate")
                 }
-            }
-            if old.model != new.model {
-                switcher.select(new.model.id)
-            }
-            if old.language != new.language {
-                // Read per dictation by dictionaryContext.
-                Log.info("language: \(new.language.code ?? "automatic"); applies at next press")
             }
         }
         settings.startWatching()

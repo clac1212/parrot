@@ -48,6 +48,11 @@ step, so they won't feel complexity creep: **it's your job to push back.**
   `TranscriptProcessor` or a `DictationObserver`.
 - **Measure before and after** any performance change, on the latency log
   (below). A speedup without numbers isn't one.
+- **UI work: read [docs/fork-ui-notes.md](docs/fork-ui-notes.md) first** —
+  how SwiftUI sizes and animates inside AppKit (the panel is an
+  `NSPopover`), how to check a change (sizing test, snapshot), and the
+  mistakes already made. Look up Apple's docs for any AppKit/SwiftUI API
+  whose behaviour you're not sure of; don't iterate on the user's screen.
 - Fork ADRs:
   - [fork-001](docs/decisions/fork-001-local-signing.md) — local signing, installed over the official app, updates off
   - [fork-002](docs/decisions/fork-002-notch-overlay.md) — dictation indicator around the notch (DynamicNotchKit), pill as fallback
@@ -63,6 +68,8 @@ step, so they won't feel complexity creep: **it's your job to push back.**
   - [fork-012](docs/decisions/fork-012-one-app-to-share.md) — one DMG to give to a friend: the app carries the review scripts and media adapter, Parakeet Ultra by default
   - [fork-013](docs/decisions/fork-013-pending-dictations.md) — dictations said outside a text field gather on the clipboard, a paragraph each; ⌘V or the next dictation in a field pastes the block
   - [fork-014](docs/decisions/fork-014-capitalization-follows-the-cursor.md) — the first letter follows the text before the cursor: small in mid-sentence, capital after one
+  - [fork-015](docs/decisions/fork-015-dictation-history.md) — the last 24 h of dictations in the panel, each with a copy button (text on disk, owner-only, a day at most)
+  - [fork-016](docs/decisions/fork-016-one-model.md) — one model, Parakeet Ultra, in the Mac's languages: no model or language menu, the saved settings ignored
 
 ## Commands
 

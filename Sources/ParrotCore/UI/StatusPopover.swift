@@ -30,11 +30,23 @@ final class StatusPopover: NSObject {
 
     private init(menuBar: MenuBarController, store: SettingsStore) {
         self.menuBar = menuBar
-        model = StatusPanelModel(store: store)
+        model = StatusPanelModel(store: store, history: .shared)
         super.init()
         model.onGrantPermissions = { [weak menuBar] in menuBar?.onGrantPermissions?() }
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: StatusPanelView(model: model))
+        popover.contentViewController = Self.hosting(StatusPanelView(model: model))
+    }
+
+    /// The panel's SwiftUI view, sized by its ideal size: with
+    /// `.preferredContentSize` the hosting controller publishes that size as
+    /// its `preferredContentSize`, which `NSPopover` follows and animates to.
+    /// The default (`.standardBounds`) sizes the window through Auto Layout
+    /// constraints instead: the popover jumped to its new height (fork-015,
+    /// docs/fork-ui-notes.md).
+    static func hosting<Content: View>(_ view: Content) -> NSHostingController<Content> {
+        let hosting = NSHostingController(rootView: view)
+        hosting.sizingOptions = .preferredContentSize
+        return hosting
     }
 
     @objc private func toggle() {
@@ -44,6 +56,7 @@ final class StatusPopover: NSObject {
         }
         guard let button = menuBar?.statusItem.button else { return }
         read()
+        model.history.prune()
         // Twice a second while open, so recording and loading show live.
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
@@ -70,13 +83,17 @@ final class StatusPopover: NSObject {
 @MainActor
 final class StatusPanelModel: ObservableObject {
     let store: SettingsStore
+    let history: DictationHistory
     @Published var status = ""
     @Published var modelLine = ""
     @Published var needsPermissions = false
+    /// Whether « Dernières dictées » is unfolded (fork-015).
+    @Published var historyExpanded = false
     var onGrantPermissions: () -> Void = {}
 
-    init(store: SettingsStore) {
+    init(store: SettingsStore, history: DictationHistory) {
         self.store = store
+        self.history = history
     }
 
     /// The menu's status slot, in French. Pure, so it is tested.
@@ -133,21 +150,40 @@ struct StatusPanelView: View {
             header
                 .padding(16)
             Divider()
-            // No scrolling: the panel is as tall as its content, which fits
-            // a MacBook screen.
-            VStack(alignment: .leading, spacing: 18) {
-                dictation
+            VStack(alignment: .leading, spacing: 0) {
+                // No scrolling: the panel is as tall as its content, which
+                // fits a MacBook screen.
+                VStack(alignment: .leading, spacing: 18) {
+                    HistorySection(history: model.history, expanded: $model.historyExpanded)  // fork-015
+                    Divider()
+                    dictation
+                    Divider()
+                    NightlySection(store: store)
+                }
+                .padding(16)
+                .fixedSize(horizontal: false, vertical: true)
                 Divider()
-                NightlySection(store: store)
+                footer
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
             }
-            .padding(16)
-            .fixedSize(horizontal: false, vertical: true)
-            Divider()
-            footer
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+            // Folding the history moves what is below it. Animated here,
+            // under the header: an animation that reaches the header also
+            // animates the popover's resize and slides the whole panel
+            // (measured, docs/fork-ui-notes.md).
+            .animation(.easeInOut(duration: 0.25), value: model.historyExpanded)
+            // Its own geometry, animated from where it was drawn: without it
+            // the block started 116 pt low, from a centred position, when
+            // the popover grew (measured).
+            .geometryGroup()
         }
         .frame(width: 360)
+        // While the popover animates between two heights, its view is
+        // briefly taller or shorter than the panel: keep the panel at the
+        // top rather than centred in it. Its ideal height is unchanged (a
+        // flexible frame reports its child's ideal size), which is all
+        // `.preferredContentSize` reads.
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private var header: some View {
@@ -165,9 +201,8 @@ struct StatusPanelView: View {
         }
     }
 
-    private var selectedModel: TranscriptionModel? {
-        store.current.model.id.flatMap(ModelRegistry.find) ?? ModelRegistry.recommended()
-    }
+    /// The one model Parrot runs (fork-016): not a choice.
+    private var selectedModel: TranscriptionModel? { ModelRegistry.recommended() }
 
     private var dictation: some View {
         SettingsGroup("Dictée") {
@@ -181,13 +216,6 @@ struct StatusPanelView: View {
                     }
                 }
             }
-            PillRow("Modèle") {
-                PillMenu(title: selectedModel?.displayName ?? "Aucun") {
-                    modelGroup("Multilingue", ModelRegistry.shared.filter(\.isMultilingual))
-                    modelGroup("Anglais seulement", ModelRegistry.shared.filter { !$0.isMultilingual })
-                }
-            }
-            languageRow
             PillRow("Dictionnaire") {
                 Button("Ouvrir") { Self.openDictionary() }
                     .buttonStyle(.pill)
@@ -196,53 +224,6 @@ struct StatusPanelView: View {
                 LaunchAtLoginToggle()
             }
         }
-    }
-
-    @ViewBuilder
-    private func modelGroup(_ title: String, _ models: [TranscriptionModel]) -> some View {
-        Section(title) {
-            ForEach(models.sorted { $0.sizeMB < $1.sizeMB }, id: \.id) { model in
-                Toggle(isOn: Binding(
-                    get: { selectedModel?.id == model.id },
-                    set: { on in if on { store.update { $0.model.id = model.id } } }
-                )) {
-                    if Transcribers.isCached(model) {
-                        Text(model.displayName)
-                    } else {
-                        Label(model.displayName, systemImage: "arrow.down.circle")
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var languageRow: some View {
-        let multilingual = selectedModel?.isMultilingual ?? false
-        let supported = selectedModel?.supportedLanguages ?? []
-        let code = store.current.language.code?.lowercased()
-        let selected = code.flatMap { supported.contains($0) ? $0 : nil }
-        PillRow("Langue") {
-            PillMenu(title: selected.map { SpokenLanguage.displayName($0) } ?? "Automatique") {
-                languageToggle("Automatique", nil, selected: selected)
-                Divider()
-                ForEach(
-                    supported.map { (code: $0, name: SpokenLanguage.displayName($0)) }
-                        .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending },
-                    id: \.code
-                ) { language in
-                    languageToggle(language.name, language.code, selected: selected)
-                }
-            }
-            .disabled(!multilingual)
-        }
-    }
-
-    private func languageToggle(_ name: String, _ code: String?, selected: String?) -> some View {
-        Toggle(name, isOn: Binding(
-            get: { selected == code },
-            set: { on in if on { store.update { $0.language.code = code } } }
-        ))
     }
 
     private var footer: some View {
