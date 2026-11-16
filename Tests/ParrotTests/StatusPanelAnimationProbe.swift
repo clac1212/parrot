@@ -3,8 +3,8 @@ import SwiftUI
 import XCTest
 @testable import ParrotCore
 
-/// Diagnostic, not a regression test: shows the real panel in an NSPopover
-/// on screen, unfolds the history, and samples at 60 Hz where the popover
+/// Diagnostic, not a regression test: shows the real panel in its
+/// `MenuBarPanel` on screen, unfolds the history, and samples at 60 Hz where the popover
 /// window is and where the header's text is (its accessibility frame, in
 /// screen points). Run with PANEL_ANIMATION=1; prints a table.
 final class StatusPanelAnimationProbe: XCTestCase {
@@ -21,12 +21,10 @@ final class StatusPanelAnimationProbe: XCTestCase {
         model.status = "Prêt · maintiens fn pour dicter"
         model.modelLine = "Parakeet Ultra"
 
-        let anchor = NSWindow(contentRect: NSRect(x: 400, y: 900, width: 60, height: 24), styleMask: [.borderless], backing: .buffered, defer: false)
-        anchor.orderFrontRegardless()
-        let popover = NSPopover()
         let hosting = StatusPopover.hosting(StatusPanelView(model: model))
-        popover.contentViewController = hosting
-        popover.show(relativeTo: anchor.contentView!.bounds, of: anchor.contentView!, preferredEdge: .minY)
+        let panel = MenuBarPanel(content: hosting)
+        NSApp.activate(ignoringOtherApps: true)
+        panel.show(under: NSRect(x: 400, y: NSScreen.main!.frame.maxY - 24, width: 30, height: 24))
         RunLoop.main.run(until: Date().addingTimeInterval(0.6))
 
         func headerFrame() -> NSRect? {
@@ -92,6 +90,6 @@ final class StatusPanelAnimationProbe: XCTestCase {
             RunLoop.main.run(until: Date().addingTimeInterval(1.0 / 60))
             sample("fold")
         }
-        popover.close()
+        panel.orderOut(nil)
     }
 }

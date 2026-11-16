@@ -9,13 +9,15 @@ Last updated: `2026.10.01`
 ## 1. Decision
 
 - **`StatusPopover`** (`UI/StatusPopover.swift`): an `NSPopover` (closes on a
-  click elsewhere) attached to `MenuBarController`'s status item, which stops
+  click elsewhere; since fork-017 a glass window, `MenuBarPanel`, with no
+  arrow) attached to `MenuBarController`'s status item, which stops
   showing its menu. Content, top to bottom:
   - the state — `MenuBarController`'s status and model slots, read twice a
     second while open and put in French ("Prêt · maintiens fn pour dicter",
     "● Enregistrement…", "Parakeet Ultra · chargement de …"), and an
     *Autoriser…* button while a permission is missing (the menu's Grant
     Permissions…);
+  - (look: cards, small titles, icons, glass buttons since fork-017)
   - **Dernières dictées** (fork-015): the last 24 h, each with a copy button;
   - **Dictée**: Raccourci, Dictionnaire (opens the file), Ouvrir au
     démarrage (in Parrot.app); no Modèle nor Langue since fork-016;

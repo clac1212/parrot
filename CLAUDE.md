@@ -50,7 +50,7 @@ step, so they won't feel complexity creep: **it's your job to push back.**
   (below). A speedup without numbers isn't one.
 - **UI work: read [docs/fork-ui-notes.md](docs/fork-ui-notes.md) first** —
   how SwiftUI sizes and animates inside AppKit (the panel is an
-  `NSPopover`), how to check a change (sizing test, snapshot), and the
+  `MenuBarPanel`, a glass window since fork-017), how to check a change (sizing test, snapshot), and the
   mistakes already made. Look up Apple's docs for any AppKit/SwiftUI API
   whose behaviour you're not sure of; don't iterate on the user's screen.
 - Fork ADRs:
@@ -70,6 +70,7 @@ step, so they won't feel complexity creep: **it's your job to push back.**
   - [fork-014](docs/decisions/fork-014-capitalization-follows-the-cursor.md) — the first letter follows the text before the cursor: small in mid-sentence, capital after one
   - [fork-015](docs/decisions/fork-015-dictation-history.md) — the last 24 h of dictations in the panel, each with a copy button (text on disk, owner-only, a day at most)
   - [fork-016](docs/decisions/fork-016-one-model.md) — one model, Parakeet Ultra, in the Mac's languages: no model or language menu, the saved settings ignored
+  - [fork-017](docs/decisions/fork-017-panel-liquid-glass.md) — the panel in macOS 26's look: a Liquid Glass window under the icon (no arrow), cards, an icon per row, glass buttons
 
 ## Commands
 

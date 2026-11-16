@@ -3,12 +3,12 @@ import SwiftUI
 import XCTest
 @testable import ParrotCore
 
-/// The panel's height follows its content (fork-015): the popover reads the
+/// The panel's height follows its content (fork-015): `MenuBarPanel` reads the
 /// hosting controller's `preferredContentSize`, so it must be finite, grow
 /// when the history unfolds and shrink back when it folds.
 final class StatusPanelSizingTests: XCTestCase {
     @MainActor
-    func testThePopoverFollowsTheContentHeight() throws {
+    func testThePanelFollowsTheContentHeight() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("sizing-\(UUID())")
         defer { try? FileManager.default.removeItem(at: dir) }
         let history = DictationHistory(file: dir.appendingPathComponent("history.json"))

@@ -1,13 +1,14 @@
 # SwiftUI in Parrot's AppKit shell — what to know before touching the UI
 
 Parrot is an AppKit app (`NSApplication`, accessory policy) that hosts SwiftUI
-views: the menu-bar panel (`NSPopover`, fork-010), the onboarding and
+views: the menu-bar panel (`MenuBarPanel`, a borderless glass window since
+fork-017; an `NSPopover` before), the onboarding and
 Settings windows (upstream), the notch (DynamicNotchKit, fork-002) and the
 pill (`RecordingOverlay`, upstream). Most UI bugs come from the seam between
 the two: **who decides a window's size, and who animates it**. Read this
 before any UI change; add to it when you learn something the hard way.
 
-## 1. Sizing a popover (or window) from SwiftUI
+## 1. Sizing a window from SwiftUI
 
 `NSHostingController.sizingOptions` decides how the SwiftUI content sizes
 its container ([Apple](https://developer.apple.com/documentation/swiftui/nshostingcontroller/sizingoptions)):
@@ -18,9 +19,12 @@ its container ([Apple](https://developer.apple.com/documentation/swiftui/nshosti
 | `.preferredContentSize` (macOS 13+) | publishes the content's **ideal size** (its size for an `.unspecified` proposal) as `preferredContentSize` ([Apple](https://developer.apple.com/documentation/swiftui/nshostingsizingoptions/preferredcontentsize)) | **Popovers.** `NSPopover` follows its controller's `preferredContentSize` and animates to it ([TomatoBar #3](https://github.com/cartfisk/TomatoBar/pull/3), [ClaudeUsageBar #36](https://github.com/Artzainnn/ClaudeUsageBar/pull/36)). |
 | `[]` | no constraints | You size the window yourself. |
 
-Rules for the panel (`StatusPopover.hosting`):
+The panel: `StatusPopover.hosting` publishes the size, and `MenuBarPanel`'s
+container controller gets it in `preferredContentSizeDidChange(for:)` (called
+on the parent when a child's `preferredContentSize` changes, [Apple](https://developer.apple.com/documentation/appkit/nsviewcontroller/preferredcontentsizedidchange(for:)))
+and resizes the window, top edge fixed. Rules:
 
-- **Always `.preferredContentSize`.** Never set `popover.contentSize` by
+- **Always `.preferredContentSize`.** Never size the window by
   hand, never measure `fittingSize` once: the panel's height changes (the
   history folds, the permissions button comes and goes).
 - **The root view must have an ideal size**: a fixed width
@@ -41,6 +45,9 @@ Rules for the panel (`StatusPopover.hosting`):
 Measured with `StatusPanelAnimationProbe` and `PopoverResizeProbe`
 (2026-11-16, macOS 27.2), at 60 Hz, on a real popover:
 
+- (Measured on the `NSPopover`; `MenuBarPanel` resizes the same way, at
+  once, and the probe gives the same numbers: header fixed, window top
+  fixed, bottom gliding 364 → 600 pt.)
 - **`NSPopover` never animates its size.** A new `preferredContentSize` or
   `contentSize` is applied in one frame, top edge fixed (the arrow side).
   `NSWindow.setFrame(_:display:animate:)` animates but **blocks the main
@@ -65,9 +72,33 @@ Measured with `StatusPanelAnimationProbe` and `PopoverResizeProbe`
 - **Left as is**: the popover's bottom edge snaps. Unfolding, the space
   appears at once and the footer glides into it; folding, the footer is
   briefly below the edge and glides up. Avoiding it means a custom window
-  instead of `NSPopover` — not worth it.
+  instead of `NSPopover` — not worth it then. (fork-017 did move to a
+  custom window, for the look; the edge still snaps.)
 
-## 3. Checking a change — before telling the user it's done
+## 3. Liquid Glass (macOS 26+, fork-017)
+
+- `glassEffect(_:in:)`, `GlassEffectContainer`, `.buttonStyle(.glass)` /
+  `.glassProminent` exist from macOS 26 ([Apple](https://developer.apple.com/documentation/swiftui/view/glasseffect(_:in:))).
+  The package targets macOS 14: always behind `if #available(macOS 26, *)`
+  with a fallback (`.panelButton()` in `PanelStyle.swift`).
+- **Glass is for controls**, not content: buttons and menus get glass;
+  cards get a faint fill and hairline. Never glass on glass — the window
+  is already glass.
+- **The window** (`MenuBarPanel`): a borderless `NSPanel`, transparent,
+  whose content view is an `NSGlassEffectView` (AppKit, macOS 26) holding
+  the SwiftUI view — what a SwiftUI `MenuBarExtra` in `.window` style looks
+  like (RunCat Neo uses that; Parrot can't, it isn't a SwiftUI `App`). A
+  borderless window refuses key status: override `canBecomeKey`. Closing:
+  `hidesOnDeactivate` (click in another app), `didResignKey`, Escape
+  (`cancelOperation`).
+- **Corners are concentric**: inner radius = outer radius − inset (glass
+  18 pt, cards 10 pt, 8 pt inside).
+- **Can't be seen offscreen**: `cacheDisplay` snapshots draw glass buttons
+  as bare dark text. `StatusPanelScreenshot` (`PANEL_SCREENSHOT=<dir>`)
+  photographs the real panel with `screencapture`, but only if the
+  terminal running it has Screen Recording; otherwise it writes nothing.
+
+## 4. Checking a change — before telling the user it's done
 
 1. **Sizing test** (`StatusPanelSizingTests`): `preferredContentSize` is
    finite, grows when the content grows, shrinks back. It failed with
@@ -76,14 +107,14 @@ Measured with `StatusPanelAnimationProbe` and `PopoverResizeProbe`
    `PANEL_SNAPSHOT=$TMPDIR/panel.png swift test --filter ParrotTests.StatusPanelSnapshot`,
    then look at both PNGs (`panel.png`, `panel-history.png`).
 3. **Animation**: `PANEL_ANIMATION=1 swift test --filter
-   ParrotTests.StatusPanelAnimationProbe` shows the real panel in a popover
+   ParrotTests.StatusPanelAnimationProbe` shows the real panel in its window
    on screen, unfolds and folds it, and prints at 60 Hz the window's frame
    and the drawn layers' presentation frames (the header's `y`, the
    bottom-most edge). A header `y` that changes = the panel slides; a
    bottom that jumps = no animation. Then ask the user to look once — the
    probe sees positions, not taste.
 
-## 4. History of mistakes (don't repeat)
+## 5. History of mistakes (don't repeat)
 
 | Date | What | Why it was wrong |
 |---|---|---|

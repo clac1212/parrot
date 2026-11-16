@@ -2,8 +2,9 @@ import AppKit
 import SwiftUI
 
 /// Dernières dictées (the panel, fork-015): the last day's dictations, to
-/// copy one again. Folded, it shows the latest; unfolded, the rest, in a
-/// list that scrolls. A click on a dictation copies it.
+/// copy one again. Folded, the card shows the latest; unfolded, the others
+/// slide in under it, in a list that scrolls. A click on a dictation copies
+/// it. Styled as the panel's other cards (fork-017).
 struct HistorySection: View {
     @ObservedObject var history: DictationHistory
     /// Held by the panel's model, which lives as long as Parrot: the
@@ -12,23 +13,30 @@ struct HistorySection: View {
     @State private var copied: Date?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header
+        VStack(alignment: .leading, spacing: 6) {
+            title
             if history.entries.isEmpty {
-                Text("Tes dictées des dernières 24 h apparaîtront ici.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                PanelCard {
+                    HStack(spacing: 10) {
+                        PanelIcon(name: "clock")
+                        Text("Tes dictées des dernières 24 h apparaîtront ici.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .frame(minHeight: PanelStyle.rowHeight + 6)
+                }
             } else if let latest = history.entries.first {
                 // The latest stays in place; unfolding slides the others in
                 // under it.
-                VStack(spacing: 6) {
+                PanelCard {
                     row(latest, lines: expanded ? 2 : 1)
                     if expanded, history.entries.count > 1 {
                         rest
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
                 }
-                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: PanelStyle.cardRadius, style: .continuous))
                 // Animated here, not with `withAnimation` around the toggle:
                 // a global transaction also animated the popover's resize,
                 // sliding the whole panel from a centred position
@@ -38,23 +46,22 @@ struct HistorySection: View {
         }
     }
 
-    private var header: some View {
+    /// The section's title, which folds and unfolds it.
+    private var title: some View {
         Button {
             expanded.toggle()
         } label: {
-            HStack(spacing: 8) {
-                Text("Dernières dictées").font(.title3.weight(.semibold))
-                Spacer()
+            PanelSectionTitle(title: "Dernières dictées") {
                 if history.entries.count > 1 {
                     Text("\(history.entries.count)")
-                        .font(.callout.monospacedDigit())
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.tertiary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.bold))
                         .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
+                        .animation(.easeInOut(duration: 0.25), value: expanded)
                 }
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .rotationEffect(.degrees(expanded ? 90 : 0))
-                    .animation(.easeInOut(duration: 0.25), value: expanded)
             }
             .contentShape(Rectangle())
         }
@@ -67,20 +74,21 @@ struct HistorySection: View {
     private var rest: some View {
         let scrolls = history.entries.count > 5
         ScrollView {
-            LazyVStack(spacing: 6) {
-                ForEach(history.entries.dropFirst()) { row($0, lines: 2) }
+            LazyVStack(spacing: 0) {
+                ForEach(history.entries.dropFirst()) { entry in
+                    Divider().padding(.horizontal, 10)
+                    row(entry, lines: 2)
+                }
             }
-            .padding(.bottom, scrolls ? 6 : 0)
         }
         .scrollIndicators(.never)
-        .frame(maxHeight: 210)
-        // Rows fade at the edges instead of being cut.
+        .frame(maxHeight: 220)
+        // Rows fade at the bottom edge instead of being cut.
         .mask {
             if scrolls {
                 LinearGradient(stops: [
-                    .init(color: .clear, location: 0),
-                    .init(color: .black, location: 0.05),
-                    .init(color: .black, location: 0.95),
+                    .init(color: .black, location: 0),
+                    .init(color: .black, location: 0.9),
                     .init(color: .clear, location: 1),
                 ], startPoint: .top, endPoint: .bottom)
             } else {
@@ -104,8 +112,8 @@ struct HistorySection: View {
     }
 }
 
-/// One dictation on a soft card, its time on the right — a copy icon on
-/// hover, a check once copied. A click anywhere on the card copies.
+/// One dictation in the card, its time on the right — a copy icon on
+/// hover, a check once copied. A click anywhere on the row copies.
 private struct HistoryRow: View {
     let entry: DictationHistory.Entry
     let lines: Int
@@ -127,7 +135,7 @@ private struct HistoryRow: View {
                     } else if hovering {
                         Label("Copier", systemImage: "doc.on.doc").foregroundStyle(.secondary)
                     } else {
-                        Text(DictationHistory.label(entry.date, now: Date())).foregroundStyle(.secondary)
+                        Text(DictationHistory.label(entry.date, now: Date())).foregroundStyle(.tertiary)
                     }
                 }
                 .font(.caption.monospacedDigit())
@@ -135,12 +143,13 @@ private struct HistoryRow: View {
                 .frame(minWidth: 34, alignment: .trailing)
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 7)
+            .padding(.vertical, 9)
             .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(Color.primary.opacity(hovering ? 0.09 : 0.05))
+                RoundedRectangle(cornerRadius: PanelStyle.cardRadius - 3, style: .continuous)
+                    .fill(Color.primary.opacity(hovering ? 0.07 : 0))
+                    .padding(3)
             )
-            .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }

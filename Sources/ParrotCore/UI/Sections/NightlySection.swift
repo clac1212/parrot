@@ -8,20 +8,26 @@ struct NightlySection: View {
     @State private var state = NightlyReview.State.load()
 
     var body: some View {
-        SettingsGroup("Apprentissage") {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(Self.headline(state))
-                    Text(Self.detail(state, corpus: store.current.corpus.enabled))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 6) {
+            PanelSectionTitle("Apprentissage")
+            PanelCard {
+                HStack(alignment: .center, spacing: 10) {
+                    PanelIcon(name: "sparkles")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(Self.headline(state))
+                        Text(Self.detail(state, corpus: store.current.corpus.enabled))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 8)
+                    if let report = state?.lastReport {
+                        Button("Rapport") { NSWorkspace.shared.open(URL(fileURLWithPath: report)) }
+                            .panelButton()
+                    }
                 }
-                Spacer()
-                if let report = state?.lastReport {
-                    Button("Rapport") { NSWorkspace.shared.open(URL(fileURLWithPath: report)) }
-                        .buttonStyle(.pill)
-                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 9)
             }
         }
         .onAppear { state = NightlyReview.State.load() }
