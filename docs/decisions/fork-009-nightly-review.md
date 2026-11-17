@@ -284,6 +284,28 @@ section). Claude stays the only judge. A smaller local model is re-tested
 offline on the verdicts Claude has given, before any new trial: 0
 additions Claude refused, ~6 GB of memory at most.
 
+### Apple's on-device model, tested 2026-11-17 — rejected
+
+For people without Claude Code (fork-012's friends), the judge that would
+need nothing: Apple Intelligence's model (`FoundationModels`, macOS 26+),
+local, free, no download, structured output (`@Generable`, the verdict
+constrained to the five values). Bench `scripts/dream/bench/apple_judge.swift`
+(Claude's prompt, one candidate per session, permissive guardrails),
+scored by `score_judge.py` against Claude's verdicts:
+
+| Set | Items | Same verdict | Additions Claude also made | **Additions Claude judged otherwise** | Refused |
+|---|---|---|---|---|---|
+| A — today's 40 candidates, full evidence | 40 | 45 % | 0 of 0 | 0 | 0 |
+| B — verdict memory, count + one example | 387 | 29 % | 10 of 11 | **64** | 14 (guardrails) |
+
+It calls almost everything `one_off` given the full evidence and
+`dictionary` given less (209 of 373), never `grammar` where Claude does:
+64 entries Claude refused — "bit → but", "blog → bloc", "composer →
+composeur" — would have corrupted every later dictation. 1.5 s per
+candidate. Not a judge, even as a fallback. Set B gives it less evidence
+than Claude had, but set A, with the same evidence, shows the same
+collapse.
+
 ## 5. Later
 
 - With a few hours of corrected audio, fine-tune Parakeet on the user's voice
