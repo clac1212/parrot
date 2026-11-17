@@ -320,6 +320,21 @@ sent: the request is refused before it leaves. Untested until the
 entitlement is granted — and then the DMG (fork-012) would need a
 provisioning profile carrying it.
 
+### Other assistants' command-line tools as the judge (2026-11-17)
+
+For people with another assistant than Claude Code. Same prompt and the
+day's 40 candidates (full evidence, 2 audits), one batch, as Claude:
+
+| Tool | Result |
+|---|---|
+| Codex (`codex exec --output-schema`, ChatGPT account, `gpt-6-luna`) | 42 s; same verdict as Claude 82 % (Bonsai 59 %, Apple's on-device 45 %); audits agree. **One harmful addition**: "plaît → plait" at 0.99 — "a safe spelling normalization" — though the user had kept "plaît" 3 times and corrected it 0 (the re-transcription drops the accent). Claude: "accent-only variant, 'plaît' is correct". The strict schema needs `additionalProperties: false` and every property required. |
+| Gemini CLI | Didn't run: the user's Google account is a Workspace one, which needs `GOOGLE_CLOUD_PROJECT` set. Nothing was sent. |
+| OpenCode | Not tested: no output schema (`--format json` wraps free text). |
+
+No other judge passes the bar (no addition Claude would refuse) on even
+one night's candidates. Their excerpts were deleted from the Mac after
+scoring.
+
 ## 5. Later
 
 - With a few hours of corrected audio, fine-tune Parakeet on the user's voice
