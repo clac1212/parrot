@@ -74,7 +74,8 @@ final class TextDelivery {
             throw DeliveryError.secureField
         case .copyToClipboard:
             injector.copyToClipboard(text)
-            Log.info("  focus changed during dictation; transcript copied to clipboard")
+            // Fork (fork-018): which apps and roles, never text.
+            Log.info("  focus changed during dictation (\(BrowserAccessibility.describe(start: focusAtStart, now: now))); transcript copied to clipboard")
             throw DeliveryError.focusChanged
         }
     }

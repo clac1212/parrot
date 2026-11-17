@@ -78,4 +78,22 @@ final class BrowserAccessibility: DictationObserver {
             )
         }
     }
+
+    /// Diagnostic for a "focus changed" delivery: the apps and the roles at
+    /// recording start and at delivery, to tell a real move from an app that
+    /// hands out a new element for the same field (seen 3× more often after
+    /// Ardia's accessibility went on, 2026-11-17). Bundle ids and roles only.
+    static func describe(start: FocusSnapshot?, now: FocusSnapshot) -> String {
+        func app(_ pid: pid_t?) -> String {
+            pid.flatMap { NSRunningApplication(processIdentifier: $0)?.bundleIdentifier } ?? "?"
+        }
+        func role(_ element: FocusedElement?) -> String {
+            guard let element else { return "none" }
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element.ref, kAXRoleAttribute as CFString, &value) == .success else { return "gone" }
+            return (value as? String) ?? "?"
+        }
+        let apps = start?.pid == now.pid ? app(now.pid) : "\(app(start?.pid)) → \(app(now.pid))"
+        return "\(apps): \(role(start?.element)) → \(role(now.element))"
+    }
 }

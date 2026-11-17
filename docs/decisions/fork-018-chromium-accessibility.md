@@ -50,6 +50,17 @@ user's next dictations in Ardia
 | `--force-renderer-accessibility` on Ardia's command line | A manual step, for one user. |
 | `AXEnhancedUserInterface` in Electron apps | Took focus from Claude's input (OpenWhispr #1116): Electron gets its own switch first, and only Chromium apps that refuse it get this one. |
 
+## 3b. First day (2026-11-17)
+
+- Ardia's switch went on at the first dictation; a dictation over a button
+  then waited on the clipboard (`nowhere to paste (AXButton)`) and its ⌘V
+  was seen (`waiting dictations pasted`): fork-013 works in Ardia again.
+- Open question: "focus changed during dictation" (the transcript copied,
+  not pasted) in 12 of 65 dictations since, against 34 of 541 over the
+  three days before. Read twice at rest, Ardia's focused element stays
+  equal (`CFEqual`), so the cause isn't known; the log line now names the
+  app and the roles at start and at delivery, to find it before any fix.
+
 ## 4. When to Revisit
 
 - `accessibility: turned on` lines in the log, and fork-013's
