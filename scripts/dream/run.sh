@@ -57,16 +57,19 @@ journal started ""
 "$PARROT" dream prepare || { journal failed "prepare"; exit 1; }
 
 rm -f decisions-claude.json
-if grep -q '"id"' candidates.json 2>/dev/null; then
-    # Claude Code outside the usual places (nvm, volta…, set up in the
-    # user's .zshrc): ask the user's own shell where it is.
-    if ! command -v claude >/dev/null; then
-        found=$(/bin/zsh -lic 'command -v claude' </dev/null 2>/dev/null | tail -1)
-        [ -x "$found" ] && PATH="$(dirname "$found"):$PATH"
-    fi
+# Claude Code outside the usual places (nvm, volta…, set up in the user's
+# .zshrc): ask the user's own shell where it is.
+if ! command -v claude >/dev/null; then
+    found=$(/bin/zsh -lic 'command -v claude' </dev/null 2>/dev/null | tail -1)
+    [ -x "$found" ] && PATH="$(dirname "$found"):$PATH"
+fi
+# Which judge there is, for the panel: none without Claude Code.
+JUDGE_TOOL=none
+command -v claude >/dev/null && JUDGE_TOOL=claude-code
+if [ "$JUDGE_TOOL" != none ] && grep -q '"id"' candidates.json 2>/dev/null; then
     "$BIN/judge_claude.sh" candidates.json decisions-claude.json || journal failed "judge"
 fi
 
 # Writes the report, state.json and the "done" line of the journal.
-"$PARROT" dream apply --judge decisions-claude.json || { journal failed "apply"; exit 1; }
+"$PARROT" dream apply --judge decisions-claude.json --judge-tool "$JUDGE_TOOL" || { journal failed "apply"; exit 1; }
 echo "== $(date '+%F %T') done"

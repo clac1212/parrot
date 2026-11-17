@@ -22,7 +22,8 @@ Last updated: `2026.10.01`
   - **Dictée**: Raccourci, Dictionnaire (opens the file), Ouvrir au
     démarrage (in Parrot.app); no Modèle nor Langue since fork-016;
   - **Apprentissage** (fork-009): information only — words learned, last
-    run (+added −removed), a link to the report; no switch, no list to
+    run (+added −removed), a link to the report, the judge (« Juge », since
+    2026-11-17: Claude via Claude Code, or none); no switch, no list to
     review (an accept/refuse list existed for a day, dropped as a
     non-choice). The last run is a date ("le 5 oct. à 09:12"), not "il y a
     3 min": the panel's view is built once and redrawn only when its data

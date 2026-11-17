@@ -335,6 +335,22 @@ No other judge passes the bar (no addition Claude would refuse) on even
 one night's candidates. Their excerpts were deleted from the Mac after
 scoring.
 
+### The judge in the panel, and every judged night kept (2026-11-17)
+
+- `run.sh` says which judge it found — `--judge-tool claude-code`, or
+  `none` without Claude Code — and `state.json` keeps it (`judge`). The
+  panel's Apprentissage card shows it in one line, no control: « Juge :
+  Claude, en ligne · via Claude Code » or « Aucun · installe Claude Code ».
+  The user asked to see "how it is configured: cloud, ChatGPT, an API
+  key…"; there is one judge, so one line.
+- `dream apply` keeps each judged night in `dream/judged/<stamp>.json`
+  (candidates and audits as the judge saw them, its verdicts; owner-only,
+  text like the corpus), so the next judge to try (Codex) is benched on
+  weeks of Claude's verdicts, not one night's 40.
+- Rejected, by the user: a hard rule in Parrot refusing an addition the
+  user kept as often as they corrected it (it would have stopped Codex's
+  "plaît → plait"). No rule beside the judge.
+
 ## 5. Later
 
 - With a few hours of corrected audio, fine-tune Parakeet on the user's voice

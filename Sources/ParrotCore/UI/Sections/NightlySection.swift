@@ -28,11 +28,31 @@ struct NightlySection: View {
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 9)
+                // Who judges what the review found (fork-009): where the
+                // excerpts go, or that nothing is learned without a judge.
+                if let judge = state.flatMap(Self.judge) {
+                    PanelDivider()
+                    PanelRow("Juge", icon: judge.online ? "cloud" : "xmark.circle") {
+                        Text(judge.text)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
         }
         .onAppear { state = NightlyReview.State.load() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             state = NightlyReview.State.load()
+        }
+    }
+
+    /// The judge the last review found, in French; nil before the first
+    /// review that recorded it. Pure, so it is tested.
+    static func judge(_ state: NightlyReview.State) -> (text: String, online: Bool)? {
+        switch state.judge {
+        case "claude-code": ("Claude, en ligne · via Claude Code", true)
+        case "none": ("Aucun · installe Claude Code", false)
+        default: nil
         }
     }
 

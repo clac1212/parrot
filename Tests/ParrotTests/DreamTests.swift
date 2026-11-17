@@ -143,3 +143,23 @@ final class LearningLoopTests: XCTestCase {
     }
 }
 
+
+/// The panel's « Juge » line (fork-009): which judge the last review found.
+final class NightlyJudgeLineTests: XCTestCase {
+    private func state(_ judge: String?) -> NightlyReview.State {
+        NightlyReview.State(lastRun: "2026-11-17T15:00:58Z", lastReport: "/tmp/r.md", judge: judge)
+    }
+
+    func testClaudeCodeIsOnline() {
+        XCTAssertEqual(NightlySection.judge(state("claude-code"))?.text, "Claude, en ligne · via Claude Code")
+        XCTAssertEqual(NightlySection.judge(state("claude-code"))?.online, true)
+    }
+
+    func testNoJudgeSaysSo() {
+        XCTAssertEqual(NightlySection.judge(state("none"))?.text, "Aucun · installe Claude Code")
+    }
+
+    func testAStateFromBeforeShowsNoLine() {
+        XCTAssertNil(NightlySection.judge(state(nil)))
+    }
+}

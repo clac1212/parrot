@@ -26,12 +26,13 @@ struct Dream: ParsableCommand {
         )
 
         @Option(name: .long, help: "The judge's decisions (JSON).") var judge: String?
+        @Option(name: .long, help: "The judge's tool: claude-code, or none when none is installed.") var judgeTool: String?
 
         func run() throws {
             let existing = { (path: String?) in
                 path.map { URL(fileURLWithPath: $0) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
             }
-            try NightlyReview.apply(judge: existing(judge))
+            try NightlyReview.apply(judge: existing(judge), judgeTool: judgeTool)
         }
     }
 }

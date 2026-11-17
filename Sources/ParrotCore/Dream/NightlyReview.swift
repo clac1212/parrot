@@ -248,7 +248,7 @@ package enum NightlyReview {
     /// Remembers the verdicts, removes the learned entries the judge found
     /// harmful, adds the ones it found safe, and writes the report. Nothing
     /// asks the user: the next run audits what this one added.
-    package static func apply(judge: URL?) throws {
+    package static func apply(judge: URL?, judgeTool: String? = nil) throws {
         let dir = try Paths.prepareDirectory(Paths.dream)
         let input = try? read(DreamCandidates.self, from: dir.appendingPathComponent("candidates.json"))
         let candidates = input?.candidates ?? [], audits = input?.audits ?? []
@@ -308,9 +308,17 @@ package enum NightlyReview {
         try Data(report.utf8).write(to: file)
         let end = ISO8601DateFormatter().string(from: Date())
         let judged = main != nil || (candidates.isEmpty && audits.isEmpty)
+        // Each judged night kept, to bench another judge against Claude's
+        // verdicts later on more than one night (fork-009 §6).
+        if let main, !candidates.isEmpty || !audits.isEmpty {
+            let judgedDir = try Paths.prepareDirectory(dir.appendingPathComponent("judged", isDirectory: true))
+            try write(JudgedNight(judge: judgeTool, candidates: candidates, audits: audits, decisions: main),
+                      to: judgedDir.appendingPathComponent(Report.stamp(Date()) + ".json"))
+        }
         try State(
             lastRun: end, lastReport: file.path, candidates: candidates.count,
-            applied: applied.count, removed: removed.count, learned: learned.entries.count, judged: judged
+            applied: applied.count, removed: removed.count, learned: learned.entries.count, judged: judged,
+            judge: judgeTool
         ).save()
         try Journal.append(Journal.Entry(
             at: end, result: "done", reason: judged ? "" : "no judge",
@@ -356,11 +364,25 @@ package enum NightlyReview {
         package var learned: Int?
         /// False when the judge didn't answer: candidates come back next run.
         package var judged: Bool?
+        /// The judge the review found: `claude-code`, or `none` when no
+        /// assistant's tool is installed. Absent in a state written before
+        /// 2026-11-17, until the next run rewrites it.
+        package var judge: String?
 
         static var file: URL { Paths.dream.appendingPathComponent("state.json") }
         package static func load() -> State? { try? NightlyReview.read(State.self, from: file) }
         func save() throws { try NightlyReview.write(self, to: Self.file) }
     }
+}
+
+/// One judged night, kept in `dream/judged/`: the candidates and audits as
+/// the judge saw them, and its verdicts. Text, like the corpus (fork-005),
+/// owner-only.
+struct JudgedNight: Codable {
+    var judge: String?
+    var candidates: [DreamCandidate]
+    var audits: [DreamAudit]
+    var decisions: DreamDecisions
 }
 
 struct DreamAudit: Codable, Equatable {
