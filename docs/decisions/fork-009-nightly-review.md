@@ -306,6 +306,20 @@ candidate. Not a judge, even as a fallback. Set B gives it less evidence
 than Claude had, but set A, with the same evidence, shows the same
 collapse.
 
+### Apple's Private Cloud Compute model — blocked by an entitlement (2026-11-17)
+
+macOS 27's SDK also offers `PrivateCloudComputeLanguageModel`: Apple's
+larger model on its Private Cloud Compute servers, free within a quota, no
+setup for Apple Intelligence users — the one judge friends could have with
+nothing to install. Its availability says `available`, but every request
+fails: unsigned, `ModelManagerError 1046`; signed with the Apple Development
+identity, "Missing entitlement: com.apple.developer.private-cloud-compute",
+a managed entitlement Apple grants on request, under eligibility rules
+(developer.apple.com/contact/request/private-cloud-compute). Nothing was
+sent: the request is refused before it leaves. Untested until the
+entitlement is granted — and then the DMG (fork-012) would need a
+provisioning profile carrying it.
+
 ## 5. Later
 
 - With a few hours of corrected audio, fine-tune Parakeet on the user's voice
