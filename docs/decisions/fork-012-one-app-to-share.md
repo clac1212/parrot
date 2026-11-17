@@ -16,7 +16,7 @@ Last updated: `2026.10.07` · Status: **built**, first DMG untested on another M
 - **The app carries what ran outside it.** `scripts/fork-resources.sh`,
   called by `build-app.sh` before signing (one line there), puts in
   `Contents/Resources/fork`:
-  - `dream/` — the daily review's scripts (fork-009), Bonsai's included
+  - `dream/` — the daily review's scripts (fork-009)
     (it only runs when its model is installed, fork-009 §6);
   - `mediaremote/` — the MediaRemote adapter (fork-008), compiled there and
     signed with the app's identity.
@@ -42,8 +42,8 @@ Last updated: `2026.10.07` · Status: **built**, first DMG untested on another M
   uncommitted changes, so each DMG is a commit. The version is
   `git describe`, never a bare tag, so Sparkle stays off (fork-001).
 - **Bonsai is not in the DMG**: 8 GB of model, ~15 GB of memory at peak (too
-  much for a 16 GB Mac), and only on trial. If it replaces Claude, it is
-  downloaded at the first review, on Macs with the memory for it.
+  much for a 16 GB Mac), and only on trial. (Trial ended and Bonsai
+  removed on 2026-11-17, fork-009 §6.)
 
 ## 2. Options considered
 

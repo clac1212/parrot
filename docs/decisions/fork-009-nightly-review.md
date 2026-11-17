@@ -152,7 +152,8 @@ compared with that expectation, median ratio 0.86):
 The user felt neither ("aucune gêne") and chose to run all three steps
 while working. The idle check is gone; AC power (or 48 h overdue) stays, for
 the battery. If dictation feels slow during a review, Bonsai is the first
-suspect: run it only when idle, or end the trial.
+suspect: run it only when idle, or end the trial. (Ended 2026-11-17, see
+§6: the Mac slowed down.)
 
 ### First run (2026-10-01, by hand)
 
@@ -234,7 +235,7 @@ remove), with a probability.
 - **Revisit when** Claude has judged a few dozen `dictionary` candidates, or a
   decision model that fits 24 GB scores clearly higher on new sources.
 
-### Bonsai 2 27B, tested 2026-10-05 — now on trial
+### Bonsai 2 27B, tested 2026-10-05 — trial ended 2026-11-17, removed
 
 PrismML's Bonsai 2 27B (Qwen3.8-27B in ternary weights, Apache-2.0; MLX
 2-bit pack, 8 GB on disk, `mlx-vlm` 0.7.2) is a generative model: it takes
@@ -270,6 +271,18 @@ own chat: the PrismML kit in `~/Bonsai-demo` (`models/` links to Parrot's
 copy, `.venv-vlm` is an APFS clone, Open WebUI in `.venv`, 2.2 GB).
 - Shipping it to everyone would also mean running it from Swift (MLX Swift),
   not a Python server.
+
+**Trial ended 2026-11-17, Bonsai removed.** Over 28 runs and 402 verdicts
+compared with Claude's: same verdict 59 %; additions by both 10, Claude's
+alone 3, **Bonsai's where Claude judged otherwise 5** — the number that had
+to stay at 0. And the Mac slowed down: 15–17 GB at peak on 24 GB, the
+review swapping (5 h 26 min for 15 candidates on 2026-11-15, against
+10–25 min usually), which the user felt while working. Removed: the model
+and its venv (8.6 GB in `dream/bonsai`), `judge_bonsai.py`, the shadow
+comparison (`ShadowTrial`, `--shadow`, `shadow.json`, the report's
+section). Claude stays the only judge. A smaller local model is re-tested
+offline on the verdicts Claude has given, before any new trial: 0
+additions Claude refused, ~6 GB of memory at most.
 
 ## 5. Later
 

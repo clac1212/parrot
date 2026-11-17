@@ -22,7 +22,7 @@ FRAMEWORK="$FORK/mediaremote/MediaRemoteAdapter.framework"
 rm -rf "$FORK"
 mkdir -p "$FORK/dream" "$FRAMEWORK"
 
-cp scripts/dream/run.sh scripts/dream/judge_claude.sh scripts/dream/judge_bonsai.py \
+cp scripts/dream/run.sh scripts/dream/judge_claude.sh \
     scripts/dream/judge_prompt.md scripts/dream/judge_schema.json "$FORK/dream/"
 chmod +x "$FORK/dream/run.sh" "$FORK/dream/judge_claude.sh"
 
