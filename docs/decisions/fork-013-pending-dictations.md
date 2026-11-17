@@ -70,6 +70,10 @@ Last updated: `2026.10.09` · Status: **built**, tested by the user (second vers
 - Two AX reads more per delivery (role, settable), each bounded by the
   0.25 s messaging timeout; to watch in the latency log's `deliver`.
 
+- **Chromium browsers** that name no focused element (Ardia, from
+  2026-11-04) made every dictation look like one into a field: fixed by
+  fork-018, which asks them to build their Accessibility tree.
+
 ## 4. When to Revisit
 
 - A week of use: grep `nowhere to paste` for roles, and false positives.

@@ -150,6 +150,7 @@ public enum Daemon {
         observers.append(menuBar)
         observers.append(LatencyLog())
         if let media = MediaPause() { observers.append(media) }  // fork-008
+        observers.append(BrowserAccessibility())  // fork-018
         let controller = DictationController(
             capture: capture,
             transcriber: transcriber,

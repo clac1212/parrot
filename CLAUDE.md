@@ -71,6 +71,7 @@ step, so they won't feel complexity creep: **it's your job to push back.**
   - [fork-015](docs/decisions/fork-015-dictation-history.md) — the last 24 h of dictations in the panel, each with a copy button (text on disk, owner-only, a day at most)
   - [fork-016](docs/decisions/fork-016-one-model.md) — one model, Parakeet Ultra, in the Mac's languages: no model or language menu, the saved settings ignored
   - [fork-017](docs/decisions/fork-017-panel-liquid-glass.md) — the panel in macOS 26's look: a Liquid Glass window under the icon (no arrow), cards, an icon per row, glass buttons
+  - [fork-018](docs/decisions/fork-018-chromium-accessibility.md) — Chromium apps (Ardia, Chrome) asked to show what has focus, so a dictation over a page gathers on the clipboard again
 
 ## Commands
 
