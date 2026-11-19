@@ -7,11 +7,19 @@ import SwiftUI
 ///   with Ajouter and ✕, « +2 » when others wait, and a bar that drains in
 ///   `duration`. Answered, the next one of the same edit follows; timed out,
 ///   it stays pending.
-/// - **All**: the pointer on a live offer, or resting on the notch
-///   (`hoverDelay`) when nothing is shown, unfolds every pending correction
-///   under that first row, which stays where it was, with « Tout ajouter »
-///   and « Tout refuser ». It folds when the pointer leaves. The user's
-///   design: an overview, not one at a time (2026-11-19).
+/// - **All**: the pointer on what is shown or on the notch above it, or
+///   resting on the notch (`hoverDelay`) when nothing is shown, unfolds
+///   every pending correction under that first row, which stays where it
+///   was, with « Tout ajouter » and « Tout refuser ». It folds `listGrace`
+///   after the pointer left the notch and the rows. The user's design: an
+///   overview, not one at a time (2026-11-19).
+///
+/// While something is shown, one test decides where the pointer is: the
+/// notch and the rows as one rectangle, read `trackInterval` apart
+/// (`track`). A first version had two — SwiftUI's hover on the rows, and the
+/// notch's monitor only when nothing was shown — so the pointer on the notch
+/// did nothing during a live offer, then unfolded everything the moment it
+/// timed out (seen by the user, 2026-11-19).
 ///
 /// A dictation always wins: it takes the notch back, and what was shown
 /// stays pending. `NotchOverlay` does the showing; this decides.
@@ -30,6 +38,7 @@ final class NotchOffers: ObservableObject {
     nonisolated static let listGrace: TimeInterval = 0.5
     /// Rows the notch shows; the panel lists the rest.
     nonisolated static let maxRows = 6
+    nonisolated static let trackInterval: TimeInterval = 0.05
 
     @Published private(set) var mode: Mode = .none
     /// When the live offer's bar runs out.
@@ -44,13 +53,24 @@ final class NotchOffers: ObservableObject {
     /// A dictation is under way: nothing comes out of the notch.
     var isBusy: () -> Bool = { false }
 
+    /// Whether the pointer is on the notch or what it shows; read while
+    /// something is shown. Tests set it; the app's reads the screen.
+    var pointerInside: () -> Bool = { false }
+    /// The view that shows the rows, for `pointerInside`.
+    weak var content: NSView?
+
     /// The live offers still to come from the latest edit.
     private var batch: [UUID] = []
     private var generation = 0
+    /// Since when the pointer has been away from the list.
+    private var outsideSince: Date?
+    private var tracker: Timer?
+    private let now: () -> Date
 
     /// `nil`: the app's queue (a default argument can't read it off the main actor).
-    init(pending: PendingCorrections? = nil) {
+    init(pending: PendingCorrections? = nil, now: @escaping () -> Date = Date.init) {
         self.pending = pending ?? .shared
+        self.now = now
     }
 
     /// Corrections just queued: the newest comes out live.
@@ -67,15 +87,18 @@ final class NotchOffers: ObservableObject {
         pending.prune()
         guard mode == .none, !pending.items.isEmpty, !isBusy() else { return }
         generation += 1
+        outsideSince = nil
         mode = .all
+        Log.info("  notch: list unfolded (pointer on the notch)")
         present()
+        startTracking()
     }
 
     func answer(_ item: PendingCorrections.Item, accepted: Bool) {
         pending.answer(item, accepted: accepted)
         switch mode {
         case .live: showNextLive()
-        case .all where pending.items.isEmpty: close()
+        case .all where pending.items.isEmpty: close(because: "all answered")
         default: break
         }
     }
@@ -83,20 +106,28 @@ final class NotchOffers: ObservableObject {
     /// « Tout ajouter » / « Tout refuser ».
     func answerAll(accepted: Bool) {
         for item in pending.items { pending.answer(item, accepted: accepted) }
-        close()
+        close(because: "all answered")
     }
 
-    /// The pointer entered or left what the notch shows.
-    func hover(_ inside: Bool) {
-        generation += 1
+    /// Where the pointer is, read `trackInterval` apart while something is
+    /// shown. On a live offer it unfolds the list; away from the list for
+    /// `listGrace`, the list folds.
+    func track(inside: Bool) {
         switch mode {
         case .live where inside:
             // Unfold everything under the live row; no more countdown.
+            generation += 1
             batch = []
             endsAt = nil
+            outsideSince = nil
             mode = .all
-        case .all where !inside:
-            closeLater(after: Self.listGrace)
+            Log.info("  notch: list unfolded (pointer on the offer)")
+        case .all where inside:
+            outsideSince = nil
+        case .all:
+            let t = now()
+            guard let since = outsideSince else { outsideSince = t; return }
+            if t.timeIntervalSince(since) >= Self.listGrace { close(because: "pointer left") }
         default: break
         }
     }
@@ -105,8 +136,10 @@ final class NotchOffers: ObservableObject {
     func yield() {
         generation += 1
         batch = []
+        if mode != .none { Log.info("  notch: corrections folded (dictation)") }
         mode = .none
         endsAt = nil
+        stopTracking()
     }
 
     /// The rows to show: the live one alone, or all, the live one first.
@@ -134,13 +167,14 @@ final class NotchOffers: ObservableObject {
                 // On top, so it stays the first row once everything unfolds.
                 pending.raise(item)
                 mode = .live(item)
-                endsAt = Date().addingTimeInterval(Self.duration)
+                endsAt = now().addingTimeInterval(Self.duration)
                 closeLater(after: Self.duration)
                 present()
+                startTracking()
                 return
             }
         }
-        close()
+        close(because: "answered")
     }
 
     private func closeLater(after delay: TimeInterval) {
@@ -149,18 +183,48 @@ final class NotchOffers: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             MainActor.assumeIsolated {
                 guard let self, self.generation == shown else { return }
-                self.close()
+                self.close(because: "timed out")
             }
         }
     }
 
-    private func close() {
+    /// `reason` for the log: what folded the notch, never what it showed.
+    private func close(because reason: String) {
         generation += 1
         batch = []
+        stopTracking()
         guard mode != .none else { return }
         mode = .none
         endsAt = nil
+        Log.info("  notch: corrections folded (\(reason))")
         dismiss()
+    }
+
+    private func startTracking() {
+        guard tracker == nil else { return }
+        let timer = Timer(timeInterval: Self.trackInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.track(inside: self.pointerInside())
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        tracker = timer
+    }
+
+    private func stopTracking() {
+        tracker?.invalidate()
+        tracker = nil
+        outsideSince = nil
+    }
+
+    /// The notch and the rows as one rectangle, with a few points of slack:
+    /// the black between them counts as on it.
+    func pointerOnShown() -> Bool {
+        guard let view = content, let window = view.window else { return false }
+        let rows = window.convertToScreen(view.convert(view.bounds, to: nil))
+        let notch = NSScreen.screens.first { $0.frame.intersects(rows) }.flatMap(NotchHover.notchRect(of:))
+        return (notch.map { rows.union($0) } ?? rows).insetBy(dx: -8, dy: -8).contains(NSEvent.mouseLocation)
     }
 }
 
@@ -176,7 +240,7 @@ struct NotchExpandedView: View {
         if offers.mode == .none {
             NotchMessageView(clock: clock)
         } else {
-            FirstClick(scheme: offers.onNotch ? .dark : nil) {
+            FirstClick(scheme: offers.onNotch ? .dark : nil, register: { offers.content = $0 }) {
                 CorrectionsView(offers: offers)
             }
         }
@@ -225,7 +289,6 @@ struct CorrectionsView: View {
         .frame(minWidth: 320, alignment: .leading)
         .padding(.horizontal, 6)
         .padding(.top, 2)
-        .onHover { offers.hover($0) }
     }
 }
 
@@ -303,11 +366,14 @@ private struct RefuseButton: View {
 /// passed by hand: a nested hosting view doesn't inherit the environment.
 struct FirstClick<Content: View>: NSViewRepresentable {
     let scheme: ColorScheme?
+    /// Hears the hosting view once made, to find it on screen.
+    var register: (NSView) -> Void = { _ in }
     @ViewBuilder let content: () -> Content
 
     func makeNSView(context: Context) -> FirstClickHostingView<AnyView> {
         let view = FirstClickHostingView(rootView: root)
         view.sizingOptions = [.intrinsicContentSize]
+        register(view)
         return view
     }
 
@@ -366,13 +432,15 @@ final class NotchHover {
 
     /// The point lies on a screen's notch (a few points of slack each side).
     static func isOnNotch(_ point: NSPoint) -> Bool {
-        NSScreen.screens.contains { screen in
-            guard let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea else { return false }
-            let width = screen.frame.width - left.width - right.width
-            let height = screen.safeAreaInsets.top
-            let notch = NSRect(x: screen.frame.midX - width / 2, y: screen.frame.maxY - height, width: width, height: height)
-            return notch.insetBy(dx: -6, dy: 0).contains(point)
-        }
+        NSScreen.screens.contains { notchRect(of: $0)?.insetBy(dx: -6, dy: 0).contains(point) == true }
+    }
+
+    /// The notch of `screen`, in screen coordinates; nil without one.
+    static func notchRect(of screen: NSScreen) -> NSRect? {
+        guard let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea else { return nil }
+        let width = screen.frame.width - left.width - right.width
+        let height = screen.safeAreaInsets.top
+        return NSRect(x: screen.frame.midX - width / 2, y: screen.frame.maxY - height, width: width, height: height)
     }
 }
 

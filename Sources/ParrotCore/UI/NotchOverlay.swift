@@ -45,6 +45,7 @@ final class NotchOverlay {
         offers.present = { [weak self] in self?.showOffers() }
         offers.dismiss = { [weak self] in self?.hide() }
         offers.isBusy = { [weak self] in self?.dictating ?? false }
+        offers.pointerInside = { [offers] in offers.pointerOnShown() }
         hover = NotchHover(wanted: { [offers] in offers.mode == .none && !offers.pending.items.isEmpty }) { [offers] in
             offers.pointerOnNotch()
         }

@@ -112,15 +112,26 @@ right model. The user chose it: « Oui, ça me va demander d'abord. »
   « Ajouter », a ✕, and under them a bar that drains in 5 s (8 s at first;
   the user found it long). Answered, the next correction of the same edit
   follows. Timed out, everything stays pending and the notch folds.
-- **Everything at once, on hover.** The pointer on the live row, or resting
-  0.3 s on the notch when nothing is shown, unfolds every pending
-  correction (6 at most) under that first row, which stays where it was,
-  each with Ajouter and ✕, and « Tout ajouter » / « Tout refuser » when
-  there are several. No countdown then; it folds 0.5 s after the pointer
-  leaves, or once empty. The user wanted an overview rather than one at a
-  time (2026-11-19). A global mouse-moved monitor watches the notch's
+- **Everything at once, on hover.** The pointer on the live row or on the
+  notch above it, or resting 0.3 s on the notch when nothing is shown,
+  unfolds every pending correction (6 at most) under that first row, which
+  stays where it was, each with Ajouter and ✕, and « Tout ajouter » /
+  « Tout refuser » when there are several. No countdown then; it folds
+  0.5 s after the pointer has left both the notch and the rows, or once
+  empty. The user wanted an overview rather than one at a time
+  (2026-11-19). While something is shown, one test says where the pointer
+  is: the notch and the rows as one rectangle, read every 50 ms. When
+  nothing is shown, a global mouse-moved monitor watches the notch's
   rectangle; mouse monitoring needs no permission. Nothing shows at rest:
   no badge.
+  - The first version had two tests: SwiftUI's hover on the rows, and the
+    notch monitor only while nothing was shown. The pointer on the notch
+    did nothing during a live offer, then unfolded the list the moment the
+    offer timed out, and then the list vanished (seen by the user,
+    2026-11-19; not proven, but the only path that folded it unanswered
+    was the pointer leaving the rows). The log now says what unfolds
+    and folds the notch, and why: « list unfolded (pointer on the offer) »,
+    « corrections folded (timed out | pointer left | answered | dictation) ».
 - **In the menu-bar panel, for every Mac.** The pending corrections are
   rows under Dictionnaire in the Dictée card, each with Ajouter and ✕ (5
   at most), and « Tout ajouter » / « Tout refuser », which answer all of
