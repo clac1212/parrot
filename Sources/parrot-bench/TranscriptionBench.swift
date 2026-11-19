@@ -86,7 +86,8 @@ enum TranscriptionBench {
             print("unknown model: \(options.model ?? "")")
             throw SilentExit(1)
         }
-        guard WhisperKitTranscriber.isCached(model) else {
+        let parakeet = model.isParakeet  // fork-004
+        guard parakeet ? ParakeetTranscriber.isCached(model) : WhisperKitTranscriber.isCached(model) else {
             print("\(model.id) is not downloaded; run: parrot models download \(model.id)")
             throw SilentExit(1)
         }
@@ -137,8 +138,18 @@ enum TranscriptionBench {
         let promptLabel = context.prompt.map { "\($0.split(separator: " ").count) words" }
             ?? (context.examples.isEmpty ? "none" : "the example for the detected language")
 
-        let transcriber = WhisperKitTranscriber(model: model, tuning: tuning)
-        try blocking { try await transcriber.warmUp() }
+        // Parakeet has its own fixed trim and padding; the tuning flags are
+        // Whisper's (fork-004).
+        let transcribe: @Sendable ([Float], TranscriptionContext) async throws -> Transcript
+        if parakeet {
+            let p = ParakeetTranscriber(model: model)
+            try blocking { try await p.warmUp() }
+            transcribe = { try await p.transcribe($0, context: $1) }
+        } else {
+            let w = WhisperKitTranscriber(model: model, tuning: tuning)
+            try blocking { try await w.warmUp() }
+            transcribe = { try await w.transcribe($0, context: $1) }
+        }
 
         let languageLabel = model.isMultilingual ? (language ?? "automatic") : "\(language ?? "-") (model)"
         print("model \(model.id) · \(options.baseline ? "baseline" : "standard") tuning · \(describe(tuning)) · language \(languageLabel) · prompt \(promptLabel)")
@@ -147,7 +158,7 @@ enum TranscriptionBench {
         // The first transcription after loading pays for CoreML's first
         // prediction; report it and keep it out of the medians.
         let firstAudio = try AudioProcessor.loadAudioAsFloatArray(fromPath: files[0].audio.path)
-        let first = try blocking { try await transcriber.transcribe(firstAudio, context: context) }
+        let first = try blocking { try await transcribe(firstAudio, context) }
         print(String(format: "first transcription after load: %.0f ms", (first.timings?.total ?? 0) * 1000))
         print("")
         print(Row.header)
@@ -166,7 +177,7 @@ enum TranscriptionBench {
             var firstWord: Bool?
             for _ in 0..<options.runs {
                 if options.pause > 0 { Thread.sleep(forTimeInterval: options.pause) }
-                let transcript = try blocking { try await transcriber.transcribe(audio, context: context) }
+                let transcript = try blocking { try await transcribe(audio, context) }
                 samples.append(transcript.timings ?? TranscriberTimings.zero)
                 if let t = transcript.timings {
                     languages[t.language ?? "-", default: 0] += 1

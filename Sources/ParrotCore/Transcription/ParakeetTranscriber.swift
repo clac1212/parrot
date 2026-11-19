@@ -37,11 +37,11 @@ package actor ParakeetTranscriber: ModelTranscriber {
             .appendingPathComponent("parakeet-ultra", isDirectory: true)
     }
 
-    static func isCached(_ model: TranscriptionModel) -> Bool {
+    package static func isCached(_ model: TranscriptionModel) -> Bool {
         AsrModels.modelsExist(at: directory, version: version)
     }
 
-    func warmUp(progress: (@Sendable (Double) -> Void)? = nil) async throws {
+    package func warmUp(progress: (@Sendable (Double) -> Void)? = nil) async throws {
         if manager != nil || retired { return }
         Log.info("loading \(model.id)...")
         _ = try Paths.prepareDirectory(Paths.appSupport)
@@ -135,4 +135,10 @@ package actor ParakeetTranscriber: ModelTranscriber {
         case .none, .detect: return nil
         }
     }
+}
+
+extension TranscriptionModel {
+    /// For `parrot-bench`, which picks the engine without seeing the
+    /// registry's internals (fork-004).
+    package var isParakeet: Bool { engine == .parakeet }
 }

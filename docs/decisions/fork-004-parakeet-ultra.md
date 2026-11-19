@@ -70,7 +70,8 @@ Options rejected for now:
 - Licence: Parakeet Ultra weights are CC-BY-4.0 (attribution).
 - The latency log's `tokens` is Parakeet's token count; `enc`/`dec` are
   FluidAudio's own timings; `fallbacks` is always 0.
-- `parrot-bench transcription` is still Whisper-only.
+- `parrot-bench transcription` runs Parakeet too since 2026-11-19 (for
+  fork-020); Whisper's tuning flags don't apply to it.
 
 ### `<unk>` in the output (2026-10-02)
 
@@ -106,6 +107,6 @@ way to exclude tokens.
 
 - Release→text after ~20 dictations (latency log) — fill in the table above.
 - The corpus shows drift, homophone errors, or missing punctuation that
-  Whisper didn't have → bench both on it (`parrot-bench` needs the Parakeet
-  engine first) and decide again.
+  Whisper didn't have → bench both on it (`parrot-bench transcription`, either
+  engine) and decide again.
 - Upstream adds its own Parakeet engine → take theirs, drop this one.
