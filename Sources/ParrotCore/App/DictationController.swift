@@ -141,6 +141,7 @@ final class DictationController {
                 inFlight -= 1
                 settle()
                 if case .failure(let error) = delivered {
+                    if error as? DeliveryError == .focusChanged { RecordingCorpus.copied(transcript.text, raw: raw.text, kept: kept, model: transcriber.modelID) }  // fork-019
                     observers.forEach { $0.dictationFailed(error) }
                     return
                 }

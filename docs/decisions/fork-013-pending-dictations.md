@@ -37,6 +37,10 @@ Last updated: `2026.10.09` · Status: **built**, tested by the user (second vers
   notch). The log says the role and the count, never text.
 - The corpus records the dictation as usual; `CorrectionWatch` finds no
   field and marks it `unreadable`.
+  Since 2026-11-19 (fork-019) the block is watched once the user pastes
+  it: `ClipboardPasteWatch` looks for it in the focused field and hands it
+  to `CorrectionWatch`, so a word fixed after ⌘V is offered for the
+  dictionary. A block of one dictation also gets its real corpus status.
 
 ## 2. Options considered
 

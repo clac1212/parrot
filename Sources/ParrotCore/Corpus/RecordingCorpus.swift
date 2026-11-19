@@ -38,6 +38,7 @@ enum RecordingCorpus {
     @discardableResult
     static func keep(_ samples: [Float]) -> String? {
         CorrectionWatch.shared.finish()
+        ClipboardPasteWatch.shared.cancel()
         guard isEnabled(), !samples.isEmpty else { return nil }
         let name = fileName(for: Date())
         // Off the main actor: the transcription waits on it.
@@ -59,8 +60,25 @@ enum RecordingCorpus {
     /// fork-019's offers to learn a correction, and writes nothing.
     static func delivered(_ text: String, raw: String, kept: String?, model: String) {
         guard !text.isEmpty else { return }
-        let file = kept.map { Paths.corpus.appendingPathComponent($0).appendingPathExtension("json") }
+        let file = record(kept)
         CorrectionWatch.shared.start(pasted: text, raw: raw == text ? nil : raw, file: file, model: model)
+        // fork-019: it went to the clipboard block (fork-013) instead; watch
+        // it once the user pastes it. A block of several dictations has no
+        // one record: offers only.
+        if let block = PendingDictations.shared.waiting {
+            let single = block.count == 1
+            ClipboardPasteWatch.shared.expect(block.text, raw: single && raw != text ? raw : nil, file: single ? file : nil, model: model)
+        }
+    }
+
+    /// `text` was left on the clipboard because focus moved during the
+    /// dictation: watch it once the user pastes it (fork-019).
+    static func copied(_ text: String, raw: String, kept: String?, model: String) {
+        ClipboardPasteWatch.shared.expect(text, raw: raw == text ? nil : raw, file: record(kept), model: model)
+    }
+
+    private static func record(_ kept: String?) -> URL? {
+        kept.map { Paths.corpus.appendingPathComponent($0).appendingPathExtension("json") }
     }
 
     /// `2026-10-01_10-12-03.wav`, in local time, so files sort by date.

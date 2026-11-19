@@ -57,6 +57,19 @@ right model. The user chose it: « Oui, ça me va demander d'abord. »
   message sent right after the fix). It reports each distinct edit once.
   It never reports while the next dictation is recorded: that release ends
   the watch without a report.
+- **A dictation pasted by hand is watched too** (2026-11-19). When Parrot
+  leaves the text on the clipboard instead of pasting it — focus moved
+  during the dictation (upstream copies it then), or no text field
+  (fork-013's block) — `Corpus/ClipboardPasteWatch.swift` reads the
+  focused field twice a second for its opening 40 characters, and hands
+  it to `CorrectionWatch` once found, as if Parrot had pasted it. It
+  stops when the clipboard changes (something else copied), at the next
+  dictation, or after 10 minutes. Seen in the log the same day: a 31 s
+  dictation whose focus moved went to the clipboard, the user pasted it
+  and fixed « Lark », and nothing was offered. A block of several
+  dictations is watched for offers only: no one corpus record holds its
+  text. Twice a second rather than fork-013's once, so an edit made right
+  after the paste isn't missed (the watch must find the text as pasted).
 - **The watch runs with the corpus off too.** It compares in memory and
   writes nothing; the corpus record is written only when the corpus is on
   (on by default since fork-009).

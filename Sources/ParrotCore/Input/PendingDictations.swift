@@ -50,6 +50,12 @@ final class PendingDictations {
         return Date().timeIntervalSince(last) > Self.expiry
     }
 
+    /// The block on the clipboard and how many dictations it holds, or nil
+    /// when none waits (fork-019 watches it once pasted).
+    var waiting: (text: String, count: Int)? {
+        isEmpty ? nil : (texts.joined(separator: "\n\n"), texts.count)
+    }
+
     /// `text` with the waiting block before it, which then starts over.
     func flush(_ text: String, at date: Date) -> String {
         defer { clear() }
