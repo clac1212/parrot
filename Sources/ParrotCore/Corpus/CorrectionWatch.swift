@@ -194,6 +194,12 @@ final class CorrectionWatch {
         guard let watch else { return }
         let focus = Self.focus()
         guard focus.pid == watch.pid, focus.element == watch.element else {
+            // Diagnostic (fork-019, 2026-11-19): in bb a second fix in the
+            // same field was missed after a "focus left". What changed: the
+            // app, the element's role, and whether the new element still
+            // holds the span. Never text.
+            let holds = focus.element?.value().map { Self.span(in: $0, before: watch.before, after: watch.after, near: watch.location) != nil } ?? false
+            Log.info("  corpus: focus left · same app \(focus.pid == watch.pid ? "yes" : "no") · now \(focus.element?.describe() ?? "no element") · holds the span \(holds ? "yes" : "no")")
             // Focus left the field: its text may be gone (a sent message), so
             // the span from the last look stands.
             _ = stop()
