@@ -42,6 +42,8 @@ final class DictationController {
     private var inFlight = 0
     /// What had focus when the current recording started (#38).
     private var focusAtStart: FocusSnapshot?
+    /// Keeps recording past a release while the voice is still on (fork-021).
+    private let speechTail: SpeechTail?
 
     init(
         capture: AudioCapture,
@@ -50,8 +52,10 @@ final class DictationController {
         observers: [DictationObserver],
         dumpWav: Bool = false,
         delivery: TextDelivery,
-        context: @escaping @MainActor () -> TranscriptionContext = { TranscriptionContext() }
+        context: @escaping @MainActor () -> TranscriptionContext = { TranscriptionContext() },
+        speechTail: SpeechTail? = nil
     ) {
+        self.speechTail = speechTail
         self.capture = capture
         self.transcriber = transcriber
         self.processors = processors
@@ -76,6 +80,9 @@ final class DictationController {
     }
 
     func press() {
+        // fork-021: a recording still running past its release ends first.
+        speechTail?.flush()
+        speechTail?.reset()
         do {
             try capture.start()
         } catch {
@@ -91,6 +98,14 @@ final class DictationController {
 
     func release() {
         let released = CFAbsoluteTimeGetCurrent()
+        // fork-021: while the voice is still on, the recording ends a little
+        // later; release→text still counts from the key.
+        guard let speechTail else { return endRecording(released: released) }
+        speechTail.release { [weak self] in self?.endRecording(released: released) }
+    }
+
+    private func endRecording(released: CFAbsoluteTime) {
+        let stopping = CFAbsoluteTimeGetCurrent()
         let samples: [Float]
         do {
             samples = try capture.finish()
@@ -102,7 +117,7 @@ final class DictationController {
             observers.forEach { $0.dictationFailed(error) }
             return
         }
-        let captureStop = CFAbsoluteTimeGetCurrent() - released
+        let captureStop = CFAbsoluteTimeGetCurrent() - stopping
         let pressToFirstSample = capture.lastStats?.firstSampleDelay
         let focus = focusAtStart
         focusAtStart = nil

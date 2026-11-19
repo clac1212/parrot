@@ -95,8 +95,10 @@ public enum Daemon {
         let capture = AudioCapture(mode: options.captureMode)
         // The notch on a notched screen, else the pill (fork-002).
         let overlay: NotchOverlay? = options.noOverlay ? nil : NotchOverlay()
-        if let overlay {
-            capture.onLevel = { level in overlay.pushLevel(level) }
+        let speechTail = SpeechTail()  // fork-021
+        capture.onLevel = { level in
+            speechTail.push(level)
+            overlay?.pushLevel(level)
         }
         // Before the menu, which shows "Check for Updates…" only when running.
         if AppLaunch.isApp { Updater.start() }
@@ -161,7 +163,8 @@ public enum Daemon {
             observers: observers,
             dumpWav: options.dumpWav,
             delivery: TextDelivery(mode: options.injectMode),
-            context: dictionaryContext
+            context: dictionaryContext,
+            speechTail: speechTail
         )
         switcher.controller = controller
 
