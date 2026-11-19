@@ -9,23 +9,31 @@ import SwiftUI
 ///
 /// Click-through like the pill: dictation is push-to-talk, there is nothing
 /// to click, and a click must never give the notch's window the focus the
-/// text is about to be pasted into.
+/// text is about to be pasted into. Except the corrections offered after a
+/// paste (fork-019, `NotchOffers`): those take clicks, and the window still
+/// never becomes key.
 @MainActor
 final class NotchOverlay {
     private let pill = RecordingOverlay()
     private let levels = OverlayModel()
     private let clock = NotchClock()
-    private let notch: DynamicNotch<NotchMessageView, NotchLeadingView, NotchTrailingView>
+    /// The corrections offered from the notch (fork-019).
+    private let offers = NotchOffers()
+    private let notch: DynamicNotch<NotchExpandedView, NotchLeadingView, NotchTrailingView>
     /// Whether the notch, not the pill, shows the current state.
     private var onNotch = false
     /// Bumped by every show, so a message timer only hides its own message.
     private var generation = 0
+    /// From the press to the delivery or the failure: nothing else comes out.
+    private var dictating = false
+    private var hover: NotchHover?
 
     init() {
         let levels = levels
         let clock = clock
+        let offers = offers
         notch = DynamicNotch(hoverBehavior: []) {
-            NotchMessageView(clock: clock)
+            NotchExpandedView(clock: clock, offers: offers)
         } compactLeading: {
             NotchLeadingView(clock: clock)
         } compactTrailing: {
@@ -34,6 +42,17 @@ final class NotchOverlay {
         // Morph straight from the compact state to a message, without
         // vanishing in between.
         notch.transitionConfiguration = .init(skipIntermediateHides: true)
+        offers.present = { [weak self] in self?.showOffers() }
+        offers.dismiss = { [weak self] in self?.hide() }
+        offers.isBusy = { [weak self] in self?.dictating ?? false }
+        hover = NotchHover(wanted: { [offers] in offers.mode == .none && !offers.pending.items.isEmpty }) { [offers] in
+            offers.pointerOnNotch()
+        }
+    }
+
+    /// Corrections just queued (fork-019): the newest comes out of the notch.
+    func offer(_ items: [PendingCorrections.Item]) {
+        offers.offer(items)
     }
 
     /// Push a new audio level (0…~1). Safe to call from any thread.
@@ -58,6 +77,8 @@ final class NotchOverlay {
 
     private func record() {
         generation += 1
+        dictating = true
+        offers.yield()
         guard let screen = Self.notchScreen() else { return useThePill(.recording) }
         onNotch = true
         levels.resetLevels()
@@ -80,6 +101,7 @@ final class NotchOverlay {
             return pill.showMessage(text)
         }
         onNotch = true
+        offers.yield()
         clock.message = text
         show { await $0.expand(on: screen) }
         let shown = generation
@@ -110,15 +132,31 @@ final class NotchOverlay {
         Task { await notch.hide() }
     }
 
-    /// Runs a DynamicNotch transition, then makes its window click-through.
+    /// The corrections (fork-019): under the notch, or on a screen without
+    /// one, in DynamicNotchKit's floating card under the menu bar.
+    private func showOffers() {
+        generation += 1
+        guard let screen = NSScreen.main else { return }
+        pill.hide()
+        onNotch = true
+        offers.onNotch = screen.auxiliaryTopLeftArea != nil
+        show(interactive: true) { await $0.expand(on: screen) }
+    }
+
+    /// Runs a DynamicNotch transition, then makes its window click-through —
+    /// or, for the corrections, clickable without ever becoming key (its
+    /// buttons don't ask for it: `needsPanelToBecomeKey` is false, probed
+    /// 2026-11-19), so the field being corrected keeps the keyboard.
     /// DynamicNotchKit builds a new window each time the notch appears, in
     /// the synchronous start of the transition, so the window exists by the
     /// time this main-queue block runs, before the animation ends.
-    private func show(_ transition: @escaping @MainActor (DynamicNotch<NotchMessageView, NotchLeadingView, NotchTrailingView>) async -> Void) {
+    private func show(interactive: Bool = false, _ transition: @escaping @MainActor (DynamicNotch<NotchExpandedView, NotchLeadingView, NotchTrailingView>) async -> Void) {
         let notch = notch
         Task { await transition(notch) }
         DispatchQueue.main.async {
-            notch.windowController?.window?.ignoresMouseEvents = true
+            guard let window = notch.windowController?.window else { return }
+            window.ignoresMouseEvents = !interactive
+            (window as? NSPanel)?.becomesKeyOnlyIfNeeded = true
         }
     }
 }
@@ -133,6 +171,7 @@ extension NotchOverlay: DictationObserver {
     }
 
     func dictationFinished(_ result: DictationResult) {
+        dictating = false
         // Kept on the clipboard instead of pasted (fork-013): say so.
         if let notice = PendingDictations.shared.takeNotice() {
             showMessage(notice)
@@ -142,6 +181,7 @@ extension NotchOverlay: DictationObserver {
     }
 
     func dictationFailed(_ error: Error) {
+        dictating = false
         if let text = RecordingOverlay.message(for: error) {
             showMessage(text)
         } else {

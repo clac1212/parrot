@@ -1,73 +1,58 @@
 import Foundation
 
 /// Offers to learn a correction the moment the user makes it (fork-019): a
-/// word fixed by hand in a pasted dictation ("pip" → "Peep") shows a small
-/// panel, "pip → Peep · Ajouter". One click writes it to the dictionary;
-/// otherwise the panel goes away on its own. Asks first because the wrong
-/// word is often a real one ("vert" → "verre"): only the user knows whether
-/// they ever say it.
+/// word fixed by hand in a pasted dictation ("pip" → "Peep") comes out of the
+/// notch, "pip → Peep · Ajouter". Every correction of the edit waits in
+/// `PendingCorrections` until the user answers, from the notch or the
+/// menu-bar panel. Asks first because the wrong word is often a real one
+/// ("vert" → "verre"): only the user knows whether they ever say it.
 ///
 /// Fed by `CorrectionWatch.onEdit`. What the user adds is theirs: the
-/// nightly review (fork-009) only ever removes its own entries. A pair let go
-/// `maxRefusals` times is never offered again, nor proposed by the review.
-@MainActor
-final class CorrectionOffer {
+/// nightly review (fork-009) only ever removes its own entries. A pair the
+/// user closed (✕) is never offered again, nor proposed by the review.
+enum CorrectionOffer {
     /// More substitutions than this in one edit is a rewrite, not a fix.
-    nonisolated static let maxSubstitutions = 2
-    /// Times a pair may be closed or left to time out before it is dropped.
-    nonisolated static let maxRefusals = 2
+    static let maxSubstitutions = 2
+    /// A ✕ is deliberate: one is final. Letting an offer time out is no
+    /// answer; it stays pending.
+    static let maxRefusals = 1
 
-    private let panel = CorrectionOfferPanel()
-
-    func consider(pasted: String, edited: String) {
+    /// Queues the corrections in `edited`; returns those that are new.
+    @MainActor
+    @discardableResult
+    static func consider(pasted: String, edited: String) -> [PendingCorrections.Item] {
+        let pending = PendingCorrections.shared
         let dictionary = (try? UserDictionary.parse(Data(contentsOf: Paths.dictionaryFile))) ?? .empty
-        guard let offer = Self.offer(pasted: pasted, edited: edited, dictionary: dictionary, refusals: Refusals.load()) else { return }
-        // Word counts only: the log never carries text.
-        Log.info("  dictionary: offered a correction (\(offer.wrong.split(separator: " ").count) → \(offer.right.split(separator: " ").count) words)")
-        panel.show(wrong: offer.wrong, right: offer.right) { accepted in
-            Self.answer(offer, accepted: accepted)
-        }
-    }
-
-    private static func answer(_ offer: WordAlignment.Substitution, accepted: Bool) {
-        do {
-            if accepted {
-                try DictionaryEditor.add(wrong: offer.wrong, right: offer.right)
-                Log.info("  dictionary: correction added by the user")
-            } else {
-                var refusals = Refusals.load()
-                refusals.note(NightlyReview.key(wrong: offer.wrong, right: offer.right))
-                try refusals.save()
-                Log.info("  dictionary: correction let go")
-            }
-        } catch {
-            Log.error("  dictionary: could not record the answer: \(error)")
-        }
+        let found = offers(pasted: pasted, edited: edited, dictionary: dictionary, refusals: Refusals.load())
+        let added = pending.add(found)
+        // Counts only: the log never carries text.
+        if !added.isEmpty { Log.info("  dictionary: \(added.count) correction(s) offered, \(pending.items.count) pending") }
+        return added
     }
 
     // MARK: - Pure, so it is tested
 
-    /// The correction to offer for `pasted` edited into `edited`, or nil.
+    /// The corrections to offer for `pasted` edited into `edited`, in order.
     ///
     /// One to three words for one to three (`WordAlignment`), the wrong side
     /// with three letters or more (two-letter words are grammar: "en" →
     /// "on", "la" → "le"), the right one with two ("bébé" → "BB"), each at
-    /// most 40 characters; not a word being
-    /// retyped (the fix a prefix of the paste); not already in the dictionary;
-    /// never one of the user's own words as the wrong side; not let go
-    /// `maxRefusals` times. The right side takes the dictionary's spelling
-    /// when it has the word, and loses a capital that only started the
-    /// sentence ("Vert" → "Verre" offers "verre", or every "verre" would be
-    /// capitalised).
-    nonisolated static func offer(
+    /// most 40 characters; not a word being retyped (the fix a prefix of the
+    /// paste); not already in the dictionary; never one of the user's own
+    /// words as the wrong side; not closed by the user (✕). The right side
+    /// takes the dictionary's spelling when it has the word, and loses a
+    /// capital that only started the sentence ("Vert" → "Verre" offers
+    /// "verre", or every "verre" would be capitalised).
+    static func offers(
         pasted: String, edited: String, dictionary: UserDictionary, refusals: Refusals
-    ) -> WordAlignment.Substitution? {
+    ) -> [WordAlignment.Substitution] {
         let substitutions = WordAlignment.substitutions(from: pasted, to: edited)
-        guard substitutions.count <= maxSubstitutions else { return nil }
+        guard substitutions.count <= maxSubstitutions else { return [] }
         var terms: [String: String] = [:]
         for term in dictionary.terms where terms[term.lowercased()] == nil { terms[term.lowercased()] = term }
         let mapped = Set(dictionary.replacements.flatMap { r in r.from.map { NightlyReview.key(wrong: $0, right: r.to) } })
 
+        var out: [WordAlignment.Substitution] = []
         for substitution in substitutions {
             let wrong = substitution.wrong
             var right = substitution.right
@@ -84,20 +69,20 @@ final class CorrectionOffer {
                   !mapped.contains(key), terms[wrong.lowercased()] == nil,
                   !refusals.dropped(key)
             else { continue }
-            return WordAlignment.Substitution(wrong: wrong, right: right)
+            out.append(WordAlignment.Substitution(wrong: wrong, right: right))
         }
-        return nil
+        return out
     }
 }
 
-/// `dictionary-refusals.json`: how many times each offered pair was closed or
-/// left to time out. Pairs only, owner-only, like the dictionary itself.
+/// `dictionary-refusals.json`: the offered pairs the user closed (✕). Pairs
+/// only, owner-only, like the dictionary itself.
 struct Refusals: Codable, Equatable {
     var pairs: [String: Int] = [:]
 
     func count(_ key: String) -> Int { pairs[key] ?? 0 }
     mutating func note(_ key: String) { pairs[key, default: 0] += 1 }
-    /// Let go too often: neither the panel nor the nightly review offers it.
+    /// Closed by the user: neither the offer nor the nightly review brings it back.
     func dropped(_ key: String) -> Bool { count(key) >= CorrectionOffer.maxRefusals }
 
     static var file: URL { Paths.appSupport.appendingPathComponent("dictionary-refusals.json") }

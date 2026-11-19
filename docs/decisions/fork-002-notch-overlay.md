@@ -27,6 +27,10 @@ Last updated: `2026.10.01`
   panel can become key, and a click on it would take the focus the text is
   about to be pasted into. So `hoverBehavior` is empty and the window is set
   to `ignoresMouseEvents` after each appearance.
+  - Since fork-019 (2026-11-19), one exception: the corrections offered
+    after a paste take clicks. The window then stays clickable but is set
+    `becomesKeyOnlyIfNeeded`, so it never becomes key and the text field
+    keeps the keyboard. The indicator itself is still click-through.
 - **No setting.** The screen decides; `--no-overlay` still turns off both.
 
 ## 2. Rationale

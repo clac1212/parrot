@@ -98,17 +98,29 @@ Measured with `StatusPanelAnimationProbe` and `PopoverResizeProbe`
   photographs the real panel with `screencapture`, but only if the
   terminal running it has Screen Recording; otherwise it writes nothing.
 
-### A panel that must not take the keyboard (fork-019)
+### Clicks in the notch without taking the keyboard (fork-019)
 
-`CorrectionOfferPanel` shows up while the user is typing in another app:
-`[.borderless, .nonactivatingPanel]`, not key (a borderless window refuses
-key by default; don't override `canBecomeKey`), `orderFrontRegardless()`,
-`hidesOnDeactivate = false` (Parrot is never the active app). For its
-buttons to answer the first click, its `NSHostingView` subclass returns
-true from `acceptsFirstMouse(for:)`. Its content is fixed per offer, so
-`fittingSize` at each show is enough (unlike the menu-bar panel, §1).
-Offscreen snapshots of it draw nothing unless the view is in a window
-(`CorrectionOfferTests.testSnapshot`).
+The corrections come out of DynamicNotchKit's window, which is a
+non-activating `NSPanel` that can become key (`canBecomeKey` is forced
+true in the library). Two settings make it clickable without stealing
+focus from the field being edited:
+- `ignoresMouseEvents = false` only while corrections show; the
+  indicator stays click-through.
+- `becomesKeyOnlyIfNeeded = true`: a click makes the panel key only if the
+  clicked view asks for it (`needsPanelToBecomeKey`). SwiftUI buttons
+  don't (probed 2026-11-19).
+
+The library's `NSHostingView` returns false for `acceptsFirstMouse`, so
+the buttons sit in a nested hosting view that returns true (`FirstClick`
+in `NotchOffers.swift`). A nested hosting view doesn't inherit the
+environment: pass the colour scheme in by hand.
+
+The notch is black, so the content is set to the dark colour scheme. On a
+screen without a notch it is DynamicNotchKit's floating card, a material:
+use system colours there.
+
+Offscreen snapshots draw nothing unless the view is in a window
+(`CorrectionOfferTests.render`).
 
 ## 4. Checking a change — before telling the user it's done
 

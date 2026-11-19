@@ -216,6 +216,7 @@ struct StatusPanelView: View {
                 Button("Ouvrir") { Self.openDictionary() }
                     .panelButton()
             }
+            PendingCorrectionsRows(pending: .shared)  // fork-019
             if LoginItem.isAvailable {
                 PanelDivider()
                 LaunchAtLoginToggle()

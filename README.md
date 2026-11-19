@@ -35,7 +35,7 @@ To dictate in another language, choose a multilingual model in Settings (⌘, fr
 
 Add your names and technical terms to `~/.config/parrot/dictionary`, a plain-text table of each word and what the model writes instead, and Parrot spells them your way. **Open Dictionary File** in Settings opens it. Edits apply on the next dictation. See [docs/dictionary.md](docs/dictionary.md).
 
-When you fix a word by hand right after a dictation, Parrot offers to add the fix to the dictionary (« pip → Peep · Ajouter »). One click adds it; otherwise the offer goes away by itself.
+When you fix a word by hand right after a dictation, Parrot offers to add the fix to the dictionary: it comes out of the notch (« pip → Peep · Ajouter »). One click adds it, ✕ never asks again; left alone, it waits under the notch (rest the pointer on it) and in Parrot's menu-bar panel for a day.
 
 ## 4. CLI
 
