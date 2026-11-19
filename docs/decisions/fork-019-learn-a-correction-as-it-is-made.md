@@ -77,6 +77,11 @@ right model. The user chose it: « Oui, ça me va demander d'abord. »
   The right side takes the dictionary's spelling when it has the word
   (claude → Claude), and drops a capital that only started the sentence
   ("Vert" → "Verre" offers "verre", or every "verre" would gain a capital).
+  In return the replacement puts the capital back where the word it
+  replaces started a sentence (`Dictionary/SentenceStart.swift`, one call
+  in upstream's `DictionaryReplacer`): "C'est bon. Vert d'eau." gives
+  "C'est bon. Verre d'eau.", not "verre" as before 2026-11-19. Elsewhere
+  the user's spelling stands.
 - **No phonetic filter.** `FrenchPhonetics` gives pip → Peep and all → owl,
   which the user wants, 0.33, the same as rewordings like je → tu. It can't
   tell them apart; the user can.

@@ -94,7 +94,7 @@ struct DictionaryReplacer {
                 continue
             }
             out += source.substring(with: NSRange(location: cursor, length: match.range.location - cursor))
-            out += rules[index - 1].to
+            out += SentenceStart.replacement(rules[index - 1].to, for: source.substring(with: match.range), at: match.range.location, in: source)  // fork-019
             cursor = match.range.location + match.range.length
         }
         out += source.substring(from: cursor)
