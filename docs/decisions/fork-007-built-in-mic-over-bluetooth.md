@@ -73,3 +73,7 @@ The user finds dictation worse with AirPods connected. Checked first:
   changing anything. The likely suspect is the distance to the Mac's
   microphone when the user wears the headset away from it — to be
   confirmed by the numbers.
+- Measured with both microphones at once, at the user's distance
+  (fork-020 §5): the AirPods' sound is far cleaner (SNR 32–46 dB against
+  18–19) but Parakeet makes about the same mistakes on both, and their
+  silent start is now 0.58–0.78 s. The built-in microphone stays.
