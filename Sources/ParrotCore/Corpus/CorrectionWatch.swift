@@ -197,7 +197,7 @@ final class CorrectionWatch {
             // Focus left the field: its text may be gone (a sent message), so
             // the span from the last look stands.
             _ = stop()
-            report(watch)
+            report(watch, because: "focus left")
             write(watch)
             return
         }
@@ -207,15 +207,18 @@ final class CorrectionWatch {
             self.watch?.changed = now
         }
         guard let current = self.watch else { return }
-        if now.timeIntervalSince(current.changed) >= Self.settledDelay { report(current) }
+        if now.timeIntervalSince(current.changed) >= Self.settledDelay { report(current, because: "settled") }
         if now.timeIntervalSince(current.started) >= Self.maxDuration { finish() }
     }
 
     /// Hands the span to `onEdit` if it differs from the paste and from what
     /// was handed last.
-    private func report(_ watch: Watch) {
+    private func report(_ watch: Watch, because reason: String) {
         guard watch.span != watch.pasted, watch.span != watch.reported else { return }
         self.watch?.reported = watch.span
+        // Diagnostic (fork-019, 2026-11-19): which path reported, and how
+        // long after the last change. Timings only.
+        Log.info(String(format: "  corpus: edit reported (%@), %.1fs after the last change", reason, Date().timeIntervalSince(watch.changed)))
         onEdit?(watch.pasted, watch.span)
     }
 

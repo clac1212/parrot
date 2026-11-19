@@ -140,6 +140,7 @@ final class NotchOverlay {
         pill.hide()
         onNotch = true
         offers.onNotch = screen.auxiliaryTopLeftArea != nil
+        Log.info("  notch: corrections shown (\(offers.onNotch ? "notch" : "floating card"))")
         show(interactive: true) { await $0.expand(on: screen) }
     }
 

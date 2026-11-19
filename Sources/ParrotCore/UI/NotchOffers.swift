@@ -53,7 +53,9 @@ final class NotchOffers: ObservableObject {
 
     /// Corrections just queued: the newest comes out live.
     func offer(_ items: [PendingCorrections.Item]) {
-        guard !items.isEmpty, !isBusy() else { return }
+        guard !items.isEmpty else { return }
+        // Diagnostic (2026-11-19): an offer the user didn't see come out.
+        guard !isBusy() else { return Log.info("  notch: offer kept pending, a dictation is under way") }
         batch = items.map(\.id)
         showNextLive()
     }
