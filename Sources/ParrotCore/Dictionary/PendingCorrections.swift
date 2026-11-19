@@ -51,6 +51,12 @@ final class PendingCorrections: ObservableObject {
         return added
     }
 
+    /// Moves `item` to the top.
+    func raise(_ item: Item) {
+        guard let i = items.firstIndex(where: { $0.id == item.id }), i > 0 else { return }
+        items.insert(items.remove(at: i), at: 0)
+    }
+
     /// The user's answer: `true` adds it to the dictionary, `false` (✕)
     /// drops it for good.
     func answer(_ item: Item, accepted: Bool) {

@@ -76,14 +76,18 @@ final class CorrectionOfferTests: XCTestCase {
         let offers = NotchOffers(pending: pending)
         let short = pending.add([.init(wrong: "pip", right: "Peep")])[0]
         let long = pending.add([.init(wrong: "Ambroise-Parais Anneuillie", right: "Ambroise-Paré")])[0]
-        let a = NSHostingView(rootView: LiveOfferView(item: short, offers: offers)).fittingSize
-        let b = NSHostingView(rootView: LiveOfferView(item: long, offers: offers)).fittingSize
-        XCTAssertGreaterThanOrEqual(a.width, 300)
-        XCTAssertLessThan(a.height, 70)
+        let a = NSHostingView(rootView: PendingCorrectionRow(item: short) { _ in }).fittingSize
+        let b = NSHostingView(rootView: PendingCorrectionRow(item: long) { _ in }).fittingSize
         XCTAssertGreaterThan(b.width, a.width)
         XCTAssertEqual(a.height, b.height, accuracy: 1)
-        let row = NSHostingView(rootView: PendingCorrectionRow(item: short) { _ in }).fittingSize
-        XCTAssertLessThan(row.height, 40)
+        offers.offer([short])
+        let live = NSHostingView(rootView: CorrectionsView(offers: offers)).fittingSize
+        offers.hover(true)
+        let all = NSHostingView(rootView: CorrectionsView(offers: offers)).fittingSize
+        XCTAssertGreaterThanOrEqual(live.width, 320)
+        XCTAssertLessThan(live.height, 70)
+        XCTAssertGreaterThan(all.height, live.height, "unfolded under the first row")
+        XCTAssertLessThan(a.height, 40)
     }
 
     /// Renders the live offer, the list and the panel rows to
@@ -97,8 +101,7 @@ final class CorrectionOfferTests: XCTestCase {
         let item = pending.add([.init(wrong: "pip", right: "Peep")])[0]
         offers.offer([item])
         try render(NotchExpandedView(clock: NotchClock(), offers: offers).padding(14).background(.black), to: path)
-        offers.yield()
-        offers.pointerOnNotch()
+        offers.hover(true)
         try render(NotchExpandedView(clock: NotchClock(), offers: offers).padding(14).background(.black), to: path.replacingOccurrences(of: ".png", with: "-list.png"))
         try render(PanelCard { PendingCorrectionsRows(pending: pending) }.frame(width: 344).padding(8)
             .environment(\.colorScheme, .dark).background(Color(nsColor: .windowBackgroundColor)),
@@ -173,7 +176,7 @@ final class NotchOffersTests: XCTestCase {
         let items = pending.add([.init(wrong: "pip", right: "Peep"), .init(wrong: "vert", right: "verre")])
         offers.offer(items)
         XCTAssertEqual(offers.mode, .live(items[0]))
-        XCTAssertEqual(offers.morePending, 1)
+        XCTAssertEqual(offers.hidden, 1, "« +1 »")
         offers.answer(items[0], accepted: true)
         XCTAssertEqual(offers.mode, .live(items[1]))
         offers.answer(items[1], accepted: false)
@@ -203,22 +206,36 @@ final class NotchOffersTests: XCTestCase {
         XCTAssertEqual(offers.mode, .none)
         let items = pending.add([.init(wrong: "pip", right: "Peep")])
         offers.pointerOnNotch()
-        XCTAssertEqual(offers.mode, .list)
+        XCTAssertEqual(offers.mode, .all)
         offers.answer(items[0], accepted: true)
         XCTAssertEqual(offers.mode, .none, "the list folds once empty")
     }
 
-    func testTheBarHoldsUnderThePointer() {
+    func testThePointerOnALiveOfferUnfoldsAll() {
         let pending = PendingCorrections(record: { _, _ in })
         let offers = NotchOffers(pending: pending)
-        offers.offer(pending.add([.init(wrong: "pip", right: "Peep")]))
+        pending.add([.init(wrong: "vert", right: "verre")])
+        let items = pending.add([.init(wrong: "pip", right: "Peep")])
+        offers.offer(items)
         let now = Date()
         XCTAssertEqual(offers.fraction(at: now), 1, accuracy: 0.05)
         XCTAssertEqual(offers.fraction(at: now.addingTimeInterval(NotchOffers.duration / 2)), 0.5, accuracy: 0.05)
+        XCTAssertEqual(offers.rows.map(\.right), ["Peep"])
         offers.hover(true)
-        XCTAssertNil(offers.endsAt)
-        XCTAssertEqual(offers.fraction(at: now.addingTimeInterval(100)), 1, accuracy: 0.05, "held")
-        offers.hover(false)
-        XCTAssertNotNil(offers.endsAt)
+        XCTAssertEqual(offers.mode, .all)
+        XCTAssertNil(offers.endsAt, "no countdown once unfolded")
+        XCTAssertEqual(offers.rows.map(\.right), ["Peep", "verre"], "the live one stays first")
+    }
+
+    func testAnswerAll() {
+        var answers: [Bool] = []
+        let pending = PendingCorrections(record: { answers.append($1) })
+        let offers = NotchOffers(pending: pending)
+        pending.add([.init(wrong: "pip", right: "Peep"), .init(wrong: "vert", right: "verre")])
+        offers.pointerOnNotch()
+        offers.answerAll(accepted: false)
+        XCTAssertEqual(answers, [false, false])
+        XCTAssertTrue(pending.items.isEmpty)
+        XCTAssertEqual(offers.mode, .none)
     }
 }

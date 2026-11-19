@@ -4,10 +4,11 @@ Last updated: `2026.11.19` · Status: **built**, to be judged by the user over a
 
 > The user fixes a word by hand in a pasted dictation ("pip" → "Peep"). Two
 > seconds after they stop typing, the correction comes out of the notch:
-> « ~~pip~~ → Peep · Ajouter · ✕ », over a bar that drains in 8 s. One click
+> « ~~pip~~ → Peep · Ajouter · ✕ », over a bar that drains in 5 s. One click
 > writes it to the dictionary, ✕ drops it for good. Left alone it goes back
-> into the notch and waits. Resting the pointer on the notch shows every
-> correction waiting, and so does the menu-bar panel, notch or not. The
+> into the notch and waits. The pointer on it, or resting on the notch,
+> unfolds every correction waiting, with « Tout ajouter » and « Tout
+> refuser »; so does the menu-bar panel, notch or not. The
 > nightly review (fork-009) keeps running behind it. The user asked for this
 > after looking at FluidVoice: "je suis nudgé au bon moment"; the notch, the
 > bar and the list on hover are the user's design (2026-11-19).
@@ -88,20 +89,24 @@ right model. The user chose it: « Oui, ça me va demander d'abord. »
   dictation was never offered, and a timed-out offer came back instead of
   the next one.
 - **Out of the notch, live (`UI/NotchOffers.swift`).** The newest correction
-  of the edit unfolds under the notch: the wrong word struck through, an
-  arrow, the right word, « +2 » when others wait, a glass « Ajouter », a ✕,
-  and under them a bar that drains in 8 s. The pointer over it holds the
-  bar, and 3 s are left when it goes. Answered, the next correction of the
-  same edit follows. Timed out, everything stays pending and the notch
-  folds.
-- **On hover, the list.** With nothing shown and something pending, the
-  pointer resting 0.3 s on the notch unfolds the list (6 at most), each
-  with ✓ and ✕. It folds 0.5 s after the pointer leaves, or once empty.
-  A global mouse-moved monitor watches the notch's rectangle; mouse
-  monitoring needs no permission. Nothing shows at rest: no badge.
+  of the edit unfolds under the notch as one row: the wrong word struck
+  through, an arrow, the right word, « +2 » when others wait, a glass
+  « Ajouter », a ✕, and under them a bar that drains in 5 s (8 s at first;
+  the user found it long). Answered, the next correction of the same edit
+  follows. Timed out, everything stays pending and the notch folds.
+- **Everything at once, on hover.** The pointer on the live row, or resting
+  0.3 s on the notch when nothing is shown, unfolds every pending
+  correction (6 at most) under that first row, which stays where it was,
+  each with Ajouter and ✕, and « Tout ajouter » / « Tout refuser » when
+  there are several. No countdown then; it folds 0.5 s after the pointer
+  leaves, or once empty. The user wanted an overview rather than one at a
+  time (2026-11-19). A global mouse-moved monitor watches the notch's
+  rectangle; mouse monitoring needs no permission. Nothing shows at rest:
+  no badge.
 - **In the menu-bar panel, for every Mac.** The pending corrections are
-  rows under Dictionnaire in the Dictée card, each with ✓ and ✕ (5 at
-  most). Without a notch there is nothing to hover, and an invisible zone
+  rows under Dictionnaire in the Dictée card, each with Ajouter and ✕ (5
+  at most), and « Tout ajouter » / « Tout refuser », which answer all of
+  them. Without a notch there is nothing to hover, and an invisible zone
   in the menu bar would never be found; the panel is the place that works
   everywhere. The notch's hover is the shortcut.
 - **Without a notch** (Mac without one, external screen): the live offer
