@@ -2,8 +2,8 @@ import Foundation
 
 /// The corrections offered and not yet answered (fork-019), newest first:
 /// what the notch shows on hover and the menu-bar panel lists. In memory
-/// only — a restart empties it — and each one goes away by itself after
-/// `lifetime`, unanswered, so the list never becomes a backlog.
+/// only — a restart empties it. Unanswered after `lifetime`, a correction
+/// is refused, as if by ✕.
 @MainActor
 final class PendingCorrections: ObservableObject {
     static let shared = PendingCorrections()
@@ -17,7 +17,10 @@ final class PendingCorrections: ObservableObject {
         var key: String { NightlyReview.key(wrong: wrong, right: right) }
     }
 
-    nonisolated static let lifetime: TimeInterval = 24 * 3600
+    /// Unanswered this long, a correction counts as refused: silence is the
+    /// user's « no », and saves a click (the user, 2026-11-19; it was 24 h,
+    /// and the list stayed in the way).
+    nonisolated static let lifetime: TimeInterval = 2 * 60
     /// Oldest dropped beyond this.
     nonisolated static let maxItems = 20
 
@@ -25,6 +28,7 @@ final class PendingCorrections: ObservableObject {
     private let now: () -> Date
     /// Writes an answer: the dictionary for yes, the refusals for no.
     private let record: (Item, Bool) -> Void
+    private var expiry: Timer?
 
     init(now: @escaping () -> Date = Date.init, record: @escaping (Item, Bool) -> Void = PendingCorrections.write) {
         self.now = now
@@ -48,6 +52,7 @@ final class PendingCorrections: ObservableObject {
             }
         }
         if items.count > Self.maxItems { items.removeLast(items.count - Self.maxItems) }
+        scheduleExpiry()
         return added
     }
 
@@ -62,25 +67,45 @@ final class PendingCorrections: ObservableObject {
     func answer(_ item: Item, accepted: Bool) {
         guard let i = items.firstIndex(where: { $0.id == item.id }) else { return }
         items.remove(at: i)
+        Log.info("  dictionary: correction \(accepted ? "added" : "refused") by the user")
         record(item, accepted)
+        scheduleExpiry()
     }
 
-    /// Drops what has waited longer than `lifetime`.
+    /// Refuses what has waited `lifetime` unanswered.
     func prune() {
         let limit = now().addingTimeInterval(-Self.lifetime)
-        if items.contains(where: { $0.added < limit }) { items.removeAll { $0.added < limit } }
+        let expired = items.filter { $0.added <= limit }
+        guard !expired.isEmpty else { return }
+        items.removeAll { $0.added <= limit }
+        Log.info("  dictionary: \(expired.count) correction(s) unanswered for \(Int(Self.lifetime / 60)) min, refused")
+        for item in expired { record(item, false) }
+    }
+
+    /// Prunes when the oldest correction runs out.
+    private func scheduleExpiry() {
+        expiry?.invalidate()
+        guard let oldest = items.map(\.added).min() else { return expiry = nil }
+        // A delay from `now`, not a date: the tests' clock isn't the wall's.
+        let delay = max(0, oldest.addingTimeInterval(Self.lifetime).timeIntervalSince(now()))
+        let timer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.prune()
+                self?.scheduleExpiry()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        expiry = timer
     }
 
     nonisolated static func write(_ item: Item, accepted: Bool) {
         do {
             if accepted {
                 try DictionaryEditor.add(wrong: item.wrong, right: item.right)
-                Log.info("  dictionary: correction added by the user")
             } else {
                 var refusals = Refusals.load()
                 refusals.note(item.key)
                 try refusals.save()
-                Log.info("  dictionary: correction refused by the user")
             }
         } catch {
             Log.error("  dictionary: could not record the answer: \(error)")

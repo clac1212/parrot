@@ -9,12 +9,13 @@ import Foundation
 ///
 /// Fed by `CorrectionWatch.onEdit`. What the user adds is theirs: the
 /// nightly review (fork-009) only ever removes its own entries. A pair the
-/// user closed (✕) is never offered again, nor proposed by the review.
+/// user closed (✕), or left unanswered for `PendingCorrections.lifetime`, is
+/// never offered again, nor proposed by the review.
 enum CorrectionOffer {
     /// More substitutions than this in one edit is a rewrite, not a fix.
     static let maxSubstitutions = 2
-    /// A ✕ is deliberate: one is final. Letting an offer time out is no
-    /// answer; it stays pending.
+    /// A ✕ is deliberate: one is final. The live offer's 5 s running out is
+    /// no answer; it stays pending until `PendingCorrections.lifetime`.
     static let maxRefusals = 1
 
     /// Queues the corrections in `edited`; returns those that are new.

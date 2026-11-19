@@ -39,13 +39,21 @@ final class NotchOffers: ObservableObject {
     /// Rows the notch shows; the panel lists the rest.
     nonisolated static let maxRows = 6
     nonisolated static let trackInterval: TimeInterval = 0.05
-    /// Rows coming and going under the first one (the user asked for it
-    /// softer than a jump, 2026-11-19).
-    static let unfold = Animation.smooth(duration: 0.3)
+    /// Rows coming and going under the first one, and the notch growing to
+    /// them: softer than a jump, then slower than 0.3 s (the user,
+    /// 2026-11-19).
+    static let unfold = Animation.smooth(duration: 0.55)
+    /// Between one row coming in and the next: they fall one after another.
+    nonisolated static let cascade: TimeInterval = 0.07
+    /// Opened from the notch at rest, the first row comes out with the notch
+    /// and the others follow once it has opened (DynamicNotchKit opens in 0.4 s).
+    nonisolated static let opening: TimeInterval = 0.3
 
     @Published private(set) var mode: Mode = .none
     /// When the live offer's bar runs out.
     @Published private(set) var endsAt: Date?
+    /// The notch is opening on the list: only its first row for now.
+    @Published private(set) var isOpening = false
     /// Black notch (white text) or a floating card (system colours).
     @Published var onNotch = true
 
@@ -90,11 +98,19 @@ final class NotchOffers: ObservableObject {
         pending.prune()
         guard mode == .none, !pending.items.isEmpty, !isBusy() else { return }
         generation += 1
+        let shown = generation
         outsideSince = nil
+        isOpening = true
         mode = .all
         Log.info("  notch: list unfolded (pointer on the notch)")
         present()
         startTracking()
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.opening) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.generation == shown else { return }
+                withAnimation(Self.unfold) { self.isOpening = false }
+            }
+        }
     }
 
     func answer(_ item: PendingCorrections.Item, accepted: Bool) {
@@ -127,6 +143,9 @@ final class NotchOffers: ObservableObject {
                 mode = .all
             }
             Log.info("  notch: list unfolded (pointer on the offer)")
+        case .all where pending.items.isEmpty:
+            // Refused by silence while shown (`PendingCorrections.lifetime`).
+            close(because: "expired")
         case .all where inside:
             outsideSince = nil
         case .all:
@@ -143,6 +162,7 @@ final class NotchOffers: ObservableObject {
         batch = []
         if mode != .none { Log.info("  notch: corrections folded (dictation)") }
         mode = .none
+        isOpening = false
         endsAt = nil
         stopTracking()
     }
@@ -152,7 +172,7 @@ final class NotchOffers: ObservableObject {
         switch mode {
         case .none: return []
         case .live(let item): return [item]
-        case .all: return Array(pending.items.prefix(Self.maxRows))
+        case .all: return Array(pending.items.prefix(isOpening ? 1 : Self.maxRows))
         }
     }
 
@@ -200,6 +220,7 @@ final class NotchOffers: ObservableObject {
         stopTracking()
         guard mode != .none else { return }
         mode = .none
+        isOpening = false
         endsAt = nil
         Log.info("  notch: corrections folded (\(reason))")
         dismiss()
@@ -276,13 +297,15 @@ struct CorrectionsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(offers.rows) { item in
-                PendingCorrectionRow(item: item, more: offers.mode == .all ? 0 : offers.hidden) {
+            ForEach(Array(offers.rows.enumerated()), id: \.element.id) { index, item in
+                PendingCorrectionRow(item: item, more: offers.mode == .all && !offers.isOpening ? 0 : offers.hidden) {
                     offers.answer(item, accepted: $0)
                 }
-                .transition(.move(edge: .top).combined(with: .opacity))
+                // One after another: the second row first, then the next.
+                .transition(.move(edge: .top).combined(with: .opacity)
+                    .animation(NotchOffers.unfold.delay(NotchOffers.cascade * Double(max(0, index - 1)))))
             }
-            if offers.mode == .all {
+            if offers.mode == .all && !offers.isOpening {
                 if offers.hidden > 0 {
                     Text("et \(offers.hidden) autres dans le panneau de Parrot")
                         .font(.caption)

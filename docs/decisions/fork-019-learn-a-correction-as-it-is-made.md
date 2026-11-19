@@ -6,7 +6,8 @@ Last updated: `2026.11.19` · Status: **built**, to be judged by the user over a
 > seconds after they stop typing, the correction comes out of the notch:
 > « ~~pip~~ → Peep · Ajouter · ✕ », over a bar that drains in 5 s. One click
 > writes it to the dictionary, ✕ drops it for good. Left alone it goes back
-> into the notch and waits. The pointer on it, or resting on the notch,
+> into the notch and waits 2 minutes; unanswered by then, it is refused, as
+> if by ✕. The pointer on it, or resting on the notch,
 > unfolds every correction waiting, with « Tout ajouter » and « Tout
 > refuser »; so does the menu-bar panel, notch or not. The
 > nightly review (fork-009) keeps running behind it. The user asked for this
@@ -100,9 +101,12 @@ right model. The user chose it: « Oui, ça me va demander d'abord. »
   tell them apart; the user can.
 - **The queue (`Dictionary/PendingCorrections.swift`).** Every correction
   offered waits there until the user answers, newest first, one entry per
-  pair (seen again, it moves up). It lives in memory only, at most 20, and
-  each entry goes away by itself after 24 h, unanswered: the list never
-  becomes a backlog. A first version (same day) offered only the first
+  pair (seen again, it moves up). It lives in memory only, at most 20.
+  **Unanswered for 2 minutes, a correction is refused**, recorded as a ✕
+  would be. The user, 2026-11-19: « ne pas répondre, c'est égal à
+  refuser, ça m'évite un clic »; the 24 h of the first version left a list
+  that was in the way. A timer prunes it when the oldest runs out; a list
+  shown on the notch folds once emptied that way. A first version (same day) offered only the first
   correction of an edit in a glass panel; a second fix in the same
   dictation was never offered, and a timed-out offer came back instead of
   the next one.
@@ -133,8 +137,10 @@ right model. The user chose it: « Oui, ça me va demander d'abord. »
     and folds the notch, and why: « list unfolded (pointer on the offer) »,
     « corrections folded (timed out | pointer left | answered | dictation) ».
 - **The look** (2026-11-19, the user's eye): the rows glide in and out as
-  the notch grows and shrinks (0.3 s, eased; how, in
-  `docs/fork-ui-notes.md`), the buttons are drawn as in an active window
+  the notch grows and shrinks (0.55 s, eased: 0.3 s was found quick), the
+  rows under the first coming in one after another, 70 ms apart; opened
+  from the notch at rest, the first row comes out with the notch and the
+  others follow (how, in `docs/fork-ui-notes.md`), the buttons are drawn as in an active window
   (the notch never becomes key, and inactive controls turn grey), and ✕ is
   a small round glass button, as everywhere in the panel.
 - **In the menu-bar panel, for every Mac.** The pending corrections are
@@ -166,15 +172,20 @@ right model. The user chose it: « Oui, ça me va demander d'abord. »
 - **✕ is final.** It notes the pair in `dictionary-refusals.json`
   (Application Support, owner-only, pairs only). The pair is never offered
   again, and the nightly review stops proposing it (`buildCandidates` skips
-  it): what the user declined, the judge must not add at night. A timeout
-  is no answer: the correction stays pending. (The first version counted
-  timeouts as refusals and dropped a pair after 2; the 3 recorded that way
-  on 2026-11-19 were cleared when the meaning changed.)
+  it): what the user declined, the judge must not add at night. The live
+  offer's 5 s running out is no answer: the correction stays pending, 2
+  minutes from when it was offered; then silence is a refusal, final like
+  ✕. (The first version counted each 5 s timeout as a refusal and dropped a
+  pair after 2; the user then wanted no answer to mean wait, and later,
+  the same day, 2 minutes of no answer to mean no.)
+  - The risk: a correction made while the user looks elsewhere is lost
+    for good, the nightly review included. Revisit if a pair the user
+    wanted never comes back.
 - **No setting.** It is on for everyone. Its cost is a notch that folds
   back by itself.
 - **Logs**: counts and the answer only (« 2 correction(s) offered, 3
-  pending », « added by the user », « refused by the user »), never the
-  words.
+  pending », « added by the user », « refused by the user », « 1
+  correction(s) unanswered for 2 min, refused »), never the words.
 
 ## 4. Options considered
 

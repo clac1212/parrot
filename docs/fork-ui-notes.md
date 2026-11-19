@@ -144,6 +144,11 @@ height jump 37 → 124 pt between two 16 ms samples. What works:
    animated and fed back into it (an endless ±0.4 pt wobble);
 4. a change under 0.5 pt is ignored.
 Result: 37 → 124 pt in ~0.35 s, eased, then still.
+With `unfold` at 0.55 s (the user found 0.3 s quick, 2026-11-19):
+37 → 123 pt in ~0.6 s. The rows under the first come in one after
+another, each transition delayed by `cascade` (`AnyTransition.animation`);
+opened from the notch at rest, the first row comes out with the notch and
+the others follow 0.3 s later (`isOpening`), so both ways in look alike.
 
 ## 4. Checking a change — before telling the user it's done
 

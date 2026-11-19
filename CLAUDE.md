@@ -72,7 +72,7 @@ step, so they won't feel complexity creep: **it's your job to push back.**
   - [fork-016](docs/decisions/fork-016-one-model.md) — one model, Parakeet Ultra, in the Mac's languages: no model or language menu, the saved settings ignored
   - [fork-017](docs/decisions/fork-017-panel-liquid-glass.md) — the panel in macOS 26's look: a Liquid Glass window under the icon (no arrow), cards, an icon per row, glass buttons
   - [fork-018](docs/decisions/fork-018-chromium-accessibility.md) — Chromium apps (Ardia, Chrome) asked to show what has focus, so a dictation over a page gathers on the clipboard again
-  - [fork-019](docs/decisions/fork-019-learn-a-correction-as-it-is-made.md) — a word fixed by hand after a paste comes out of the notch for the dictionary (« pip → Peep · Ajouter »), asked first; unanswered ones wait (hover the notch, or the menu-bar panel); ✕ is final, for the nightly review too
+  - [fork-019](docs/decisions/fork-019-learn-a-correction-as-it-is-made.md) — a word fixed by hand after a paste comes out of the notch for the dictionary (« pip → Peep · Ajouter »), asked first; unanswered ones wait 2 min (hover the notch, or the menu-bar panel), then count as refused; a refusal is final, for the nightly review too
   - [fork-020](docs/decisions/fork-020-no-voice-isolation.md) — **rejected**: voice isolation before transcription — Apple's `AUSoundIsolation` makes Parakeet 3–5× worse, noisy or clean
   - [fork-021](docs/decisions/fork-021-last-word-after-the-key.md) — released while the voice is still on, the recording goes on until 150 ms of silence (400 ms at most); released in silence, it stops at once
 

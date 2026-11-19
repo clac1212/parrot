@@ -155,13 +155,16 @@ final class PendingCorrectionsTests: XCTestCase {
         XCTAssertEqual(answers.count, 1, "answered once")
     }
 
-    func testUnansweredGoAwayAfterADay() {
+    func testUnansweredAreRefusedAfterTwoMinutes() {
         let pending = make()
         pending.add([.init(wrong: "pip", right: "Peep")])
-        clock += PendingCorrections.lifetime + 1
+        clock += PendingCorrections.lifetime - 1
+        pending.prune()
+        XCTAssertEqual(pending.items.count, 1, "still waiting")
+        clock += 1
         pending.prune()
         XCTAssertTrue(pending.items.isEmpty)
-        XCTAssertTrue(answers.isEmpty, "expiry is no answer")
+        XCTAssertEqual(answers.map(\.1), [false], "silence is a refusal")
     }
 }
 
@@ -250,6 +253,33 @@ final class NotchOffersTests: XCTestCase {
         XCTAssertEqual(offers.mode, .none)
         XCTAssertEqual(hidden, 1)
         XCTAssertEqual(pending.items.count, 2, "folding answers nothing")
+    }
+
+    func testFromTheNotchTheFirstRowComesOutThenTheOthers() async throws {
+        let pending = PendingCorrections(record: { _, _ in })
+        let offers = NotchOffers(pending: pending)
+        pending.add([.init(wrong: "pip", right: "Peep"), .init(wrong: "vert", right: "verre")])
+        offers.pointerOnNotch()
+        XCTAssertEqual(offers.rows.map(\.right), ["Peep"], "with the notch opening")
+        try await Task.sleep(for: .seconds(NotchOffers.opening + 0.1))
+        XCTAssertEqual(offers.rows.map(\.right), ["Peep", "verre"])
+    }
+
+    func testTheListFoldsWhenItsCorrectionsExpire() {
+        var clock = Date(timeIntervalSince1970: 1_000_000)
+        var refused = 0
+        let pending = PendingCorrections(now: { clock }, record: { refused += $1 ? 0 : 1 })
+        let offers = NotchOffers(pending: pending, now: { clock })
+        var hidden = 0
+        offers.dismiss = { hidden += 1 }
+        pending.add([.init(wrong: "pip", right: "Peep")])
+        offers.pointerOnNotch()
+        clock += PendingCorrections.lifetime
+        pending.prune()
+        offers.track(inside: true)
+        XCTAssertEqual(offers.mode, .none)
+        XCTAssertEqual(hidden, 1)
+        XCTAssertEqual(refused, 1)
     }
 
     func testAnswerAll() {
