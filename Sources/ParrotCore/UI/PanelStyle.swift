@@ -143,6 +143,18 @@ extension View {
     }
 }
 
+extension View {
+    /// A small round glass button holding an icon (✕); plain before macOS 26.
+    @ViewBuilder
+    func panelIconButton() -> some View {
+        if #available(macOS 26, *) {
+            buttonStyle(.glass).buttonBorderShape(.circle)
+        } else {
+            buttonStyle(.plain).foregroundStyle(.secondary)
+        }
+    }
+}
+
 /// A pop-up menu shown as a glass button: the hotkey.
 struct PanelMenu<Content: View>: View {
     let title: String

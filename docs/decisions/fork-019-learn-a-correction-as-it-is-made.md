@@ -132,6 +132,11 @@ right model. The user chose it: « Oui, ça me va demander d'abord. »
     was the pointer leaving the rows). The log now says what unfolds
     and folds the notch, and why: « list unfolded (pointer on the offer) »,
     « corrections folded (timed out | pointer left | answered | dictation) ».
+- **The look** (2026-11-19, the user's eye): the rows glide in and out as
+  the notch grows and shrinks (0.3 s, eased; how, in
+  `docs/fork-ui-notes.md`), the buttons are drawn as in an active window
+  (the notch never becomes key, and inactive controls turn grey), and ✕ is
+  a small round glass button, as everywhere in the panel.
 - **In the menu-bar panel, for every Mac.** The pending corrections are
   rows under Dictionnaire in the Dictée card, each with Ajouter and ✕ (5
   at most), and « Tout ajouter » / « Tout refuser », which answer all of

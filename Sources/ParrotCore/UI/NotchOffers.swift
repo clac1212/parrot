@@ -39,6 +39,9 @@ final class NotchOffers: ObservableObject {
     /// Rows the notch shows; the panel lists the rest.
     nonisolated static let maxRows = 6
     nonisolated static let trackInterval: TimeInterval = 0.05
+    /// Rows coming and going under the first one (the user asked for it
+    /// softer than a jump, 2026-11-19).
+    static let unfold = Animation.smooth(duration: 0.3)
 
     @Published private(set) var mode: Mode = .none
     /// When the live offer's bar runs out.
@@ -95,7 +98,7 @@ final class NotchOffers: ObservableObject {
     }
 
     func answer(_ item: PendingCorrections.Item, accepted: Bool) {
-        pending.answer(item, accepted: accepted)
+        withAnimation(Self.unfold) { pending.answer(item, accepted: accepted) }
         switch mode {
         case .live: showNextLive()
         case .all where pending.items.isEmpty: close(because: "all answered")
@@ -118,9 +121,11 @@ final class NotchOffers: ObservableObject {
             // Unfold everything under the live row; no more countdown.
             generation += 1
             batch = []
-            endsAt = nil
             outsideSince = nil
-            mode = .all
+            withAnimation(Self.unfold) {
+                endsAt = nil
+                mode = .all
+            }
             Log.info("  notch: list unfolded (pointer on the offer)")
         case .all where inside:
             outsideSince = nil
@@ -235,15 +240,28 @@ final class NotchOffers: ObservableObject {
 struct NotchExpandedView: View {
     @ObservedObject var clock: NotchClock
     @ObservedObject var offers: NotchOffers
+    /// The rows' size, set here so the notch's black glides to it: a size
+    /// that only the nested hosting view knew jumped in one frame (probed
+    /// 2026-11-19: 37 → 124 pt between two samples).
+    @State private var size: CGSize = .zero
 
     var body: some View {
         if offers.mode == .none {
             NotchMessageView(clock: clock)
         } else {
-            FirstClick(scheme: offers.onNotch ? .dark : nil, register: { offers.content = $0 }) {
+            FirstClick(scheme: offers.onNotch ? .dark : nil, register: { offers.content = $0 }, onSize: resize) {
                 CorrectionsView(offers: offers)
             }
+            .frame(width: size == .zero ? nil : size.width, height: size == .zero ? nil : size.height, alignment: .top)
+            .clipped()
         }
+    }
+
+    /// The first size at once (the notch opens with its own animation),
+    /// the next ones animated.
+    private func resize(_ new: CGSize) {
+        guard abs(new.width - size.width) > 0.5 || abs(new.height - size.height) > 0.5 else { return }
+        if size == .zero { size = new } else { withAnimation(NotchOffers.unfold) { size = new } }
     }
 }
 
@@ -262,6 +280,7 @@ struct CorrectionsView: View {
                 PendingCorrectionRow(item: item, more: offers.mode == .all ? 0 : offers.hidden) {
                     offers.answer(item, accepted: $0)
                 }
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
             if offers.mode == .all {
                 if offers.hidden > 0 {
@@ -272,6 +291,7 @@ struct CorrectionsView: View {
                 if pending.items.count > 1 {
                     AnswerAllButtons { offers.answerAll(accepted: $0) }
                         .padding(.top, 2)
+                        .transition(.opacity)
                 }
             } else {
                 TimelineView(.animation(paused: offers.endsAt == nil)) { context in
@@ -289,6 +309,7 @@ struct CorrectionsView: View {
         .frame(minWidth: 320, alignment: .leading)
         .padding(.horizontal, 6)
         .padding(.top, 2)
+        .clipped()
     }
 }
 
@@ -353,8 +374,7 @@ private struct RefuseButton: View {
         Button(action: action) {
             Image(systemName: "xmark").font(.caption.weight(.semibold))
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        .panelIconButton()
         .help("Ne jamais ajouter")
     }
 }
@@ -368,30 +388,73 @@ struct FirstClick<Content: View>: NSViewRepresentable {
     let scheme: ColorScheme?
     /// Hears the hosting view once made, to find it on screen.
     var register: (NSView) -> Void = { _ in }
+    /// Hears the content's size each time it changes, for a parent that
+    /// animates its frame to it.
+    var onSize: ((CGSize) -> Void)?
     @ViewBuilder let content: () -> Content
 
     func makeNSView(context: Context) -> FirstClickHostingView<AnyView> {
         let view = FirstClickHostingView(rootView: root)
         view.sizingOptions = [.intrinsicContentSize]
+        view.onSize = onSize
         register(view)
+        view.reportSize()
         return view
     }
 
     func updateNSView(_ view: FirstClickHostingView<AnyView>, context: Context) {
+        view.onSize = onSize
         view.rootView = root
     }
 
+    /// The parent's size when it sets one (it animates to the content's),
+    /// else the content's own.
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: FirstClickHostingView<AnyView>, context: Context) -> CGSize? {
-        nsView.fittingSize
+        if onSize != nil, let width = proposal.width, let height = proposal.height { return CGSize(width: width, height: height) }
+        return nsView.fittingSize
     }
 
+    /// Drawn as in an active window: the notch never becomes key (the field
+    /// keeps the keyboard), and controls in an inactive window turn grey —
+    /// the « Ajouter » the user saw (2026-11-19).
     private var root: AnyView {
-        if let scheme { AnyView(content().environment(\.colorScheme, scheme)) } else { AnyView(content()) }
+        let active = content().environment(\.appearsActive, true)
+        if let scheme { return AnyView(active.environment(\.colorScheme, scheme)) }
+        return AnyView(active)
     }
 }
 
 final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
+    var onSize: ((CGSize) -> Void)?
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    /// SwiftUI calls this when the content's ideal size may change
+    /// (`sizingOptions` has `.intrinsicContentSize`); the parent hears it on
+    /// the next turn, outside SwiftUI's update.
+    override func invalidateIntrinsicContentSize() {
+        super.invalidateIntrinsicContentSize()
+        reportSize()
+    }
+
+    /// Also after each layout: the invalidation can come before SwiftUI has
+    /// the new size (probed: the ideal height read 37 pt right after it,
+    /// 124 pt later, with no second call).
+    override func layout() {
+        super.layout()
+        reportSize()
+    }
+
+    func reportSize() {
+        guard onSize != nil else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let onSize = self.onSize else { return }
+            // The ideal size, not `fittingSize`: that one follows the frame
+            // the parent is animating, and fed back into it (probed: an
+            // endless ±0.4 pt wobble around 37 pt).
+            onSize(self.intrinsicContentSize)
+        }
+    }
 }
 
 /// Watches the pointer over the notch while nothing is shown: a global

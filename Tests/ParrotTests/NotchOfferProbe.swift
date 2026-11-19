@@ -38,4 +38,43 @@ final class NotchOfferProbe: XCTestCase {
         }
         await notch.hide()
     }
+
+    /// The unfold (fork-019): prints at ~60 Hz the nested hosting view's
+    /// frame while a live offer unfolds into three rows. A height that jumps
+    /// in one sample = no animation; one that glides = animated.
+    @MainActor
+    func testTheUnfoldGlides() async throws {
+        guard ProcessInfo.processInfo.environment["NOTCH_PROBE"] != nil else { throw XCTSkip("no NOTCH_PROBE") }
+        NSApplication.shared.setActivationPolicy(.accessory)
+        let pending = PendingCorrections(record: { _, _ in })
+        let offers = NotchOffers(pending: pending)
+        let clock = NotchClock()
+        let notch = DynamicNotch(hoverBehavior: []) {
+            NotchExpandedView(clock: clock, offers: offers)
+        } compactLeading: { EmptyView() } compactTrailing: { EmptyView() }
+        pending.add([.init(wrong: "vert", right: "verre"), .init(wrong: "cloud", right: "Claude")])
+        offers.offer(pending.add([.init(wrong: "pip", right: "Peep")]))
+        let screen = try XCTUnwrap(NSScreen.main)
+        Task { await notch.expand(on: screen) }
+        try await Task.sleep(for: .milliseconds(900))
+        func firstClick(in view: NSView) -> NSView? {
+            if String(describing: type(of: view)).hasPrefix("FirstClickHostingView") { return view }
+            for sub in view.subviews { if let found = firstClick(in: sub) { return found } }
+            return nil
+        }
+        offers.pointerInside = { true }
+        let window = try XCTUnwrap(notch.windowController?.window)
+        let nested = try XCTUnwrap(window.contentView.flatMap(firstClick))
+        offers.track(inside: true)
+        let start = Date()
+        var last = -1.0
+        for _ in 0..<40 {
+            let h = Double(nested.frame.height)
+            let p = Double(nested.layer?.presentation()?.bounds.height ?? -1)
+            if h != last || Int(Date().timeIntervalSince(start) * 1000) % 200 < 17 { print(String(format: "probe: +%3.0f ms · nested height %.1f · presentation %.1f · intrinsic %.1f · mode %@", Date().timeIntervalSince(start) * 1000, h, p, nested.intrinsicContentSize.height, "\(offers.mode)".prefix(4) as CVarArg)) }
+            last = h
+            try await Task.sleep(for: .milliseconds(16))
+        }
+        await notch.hide()
+    }
 }

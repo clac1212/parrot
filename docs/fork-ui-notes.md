@@ -122,6 +122,29 @@ use system colours there.
 Offscreen snapshots draw nothing unless the view is in a window
 (`CorrectionOfferTests.render`).
 
+**Controls look inactive** in a window that is never key: a prominent
+glass button turns grey, « Tout ajouter » dims. The notch's rows set
+`.environment(\.appearsActive, true)` (settable, SwiftUI's interface
+checked 2026-11-19), so they look as in the menu-bar panel.
+
+### Animating the notch's size (fork-019, measured 2026-11-19)
+
+DynamicNotchKit's black shape follows its content's ideal size
+(`.fixedSize()` around the expanded view). Our rows sit in the nested
+`FirstClick` hosting view, so the shape knew their size only through
+`sizeThatFits` → `fittingSize`, and `withAnimation` around the change did
+nothing: `NotchOfferProbe.testTheUnfoldGlides` (`NOTCH_PROBE=1`) saw the
+height jump 37 → 124 pt between two 16 ms samples. What works:
+1. the outer view (`NotchExpandedView`) owns the size as `@State` and
+   frames the nested view with it, animated (`withAnimation(.smooth)`);
+2. the nested hosting view reports its **`intrinsicContentSize`** after
+   each `invalidateIntrinsicContentSize()` *and* each `layout()` — the
+   invalidation alone can come before SwiftUI has the new size;
+3. never `fittingSize` for that report: it follows the frame being
+   animated and fed back into it (an endless ±0.4 pt wobble);
+4. a change under 0.5 pt is ignored.
+Result: 37 → 124 pt in ~0.35 s, eased, then still.
+
 ## 4. Checking a change — before telling the user it's done
 
 1. **Sizing test** (`StatusPanelSizingTests`): `preferredContentSize` is
@@ -145,4 +168,6 @@ Offscreen snapshots draw nothing unless the view is in a window
 | 2026-11-16 | Animated the history with `withAnimation`, the popover sized by `.standardBounds` | The popover jumped to its new height while the content animated: "everything reloads". |
 | 2026-11-16 | Removed `withAnimation` | Then nothing animated at all; the cause (sizing) was untouched. |
 | 2026-11-16 | `.frame(maxHeight: .infinity)` on the root, still `.standardBounds` | Infinite max constraint: the panel stayed at its tallest. Fixed by `.preferredContentSize`. |
+| 2026-11-19 | `withAnimation` around the notch's unfold, size from the nested hosting view | The black shape jumped in one frame (probed); see « Animating the notch's size ». |
+| 2026-11-19 | Reported `fittingSize` to the animating parent | Fed back into itself: endless wobble around 37 pt. |
 | 2026-11-16 | `.preferredContentSize` + `withAnimation` around the toggle | Header slid from 116 pt low (measured). Fixed by §2's recipe, found with the probe, not by trying on the user's screen. |
