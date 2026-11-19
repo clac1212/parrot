@@ -14,10 +14,16 @@ enum PreferredInput {
             defaultIsBluetooth: isBluetooth(transportType(systemDefault)),
             builtIn: builtInInputID()
         )
+        _ = lastChoice.swap(substitute == nil ? 0 : 1)
         guard let substitute else { return systemDefault }
         logOnce(systemDefault, substitute)
         return substitute
     }
+
+    /// Whether the last choice replaced a Bluetooth default: for each
+    /// recording's log line, to compare dictations with and without a
+    /// headset connected (diagnostic, 2026-11-19).
+    static var lastChoiceReplacedBluetooth: Bool { lastChoice.read() == 1 }
 
     /// The built-in microphone to use instead of the default, or nil to keep
     /// the default. Pure, so it is tested.
@@ -65,6 +71,7 @@ enum PreferredInput {
     }
 
     private static let lastLogged = AtomicPair()
+    private static let lastChoice = AtomicPair()
 }
 
 /// The last logged substitution, read from capture and main threads.
@@ -79,5 +86,11 @@ private final class AtomicPair: @unchecked Sendable {
         let old = value
         value = new
         return old
+    }
+
+    func read() -> UInt64 {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
     }
 }

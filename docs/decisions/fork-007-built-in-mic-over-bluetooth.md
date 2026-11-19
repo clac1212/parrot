@@ -55,3 +55,21 @@ as media "going weird" during dictation.
 - A Bluetooth microphone that starts without the half-second gap → measure
   it (corpus leading zeros) and keep those.
 - The user dictates mostly away from the Mac with a headset.
+
+## 5. "Not great with my AirPods" (2026-11-19)
+
+The user finds dictation worse with AirPods connected. Checked first:
+
+- Parrot does not record from the AirPods: since 2026-10-01 every dictation
+  is on the built-in microphone at 48 kHz (4,521 recordings). The 35 at
+  24 kHz are all from 2026-10-01, before this decision.
+- The log can't tell which dictations had a headset connected: the
+  substitution is logged once per launch. Splitting the log at that line
+  (rough: it stays "on" after the AirPods leave) shows no difference:
+  median level 0.047 vs 0.030, edits 23 % vs 25 %.
+- Diagnostic added: each recording's line ends with `· headset connected`
+  when the built-in microphone stood in for a Bluetooth default. After a
+  few days, compare level and edit rate with and without it before
+  changing anything. The likely suspect is the distance to the Mac's
+  microphone when the user wears the headset away from it — to be
+  confirmed by the numbers.

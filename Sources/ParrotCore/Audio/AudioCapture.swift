@@ -174,6 +174,8 @@ package final class AudioCapture {
         )
         line += " · press→first sample \(ms(stats.firstSampleDelay)) · first sound \(ms(stats.firstSoundDelay))"
         line += " · first buffer \(ms(stats.firstBufferDelay)) · \(stats.buffers) buffers · \(stats.inputFrames) frames"
+        // fork-007: the built-in microphone stood in for a Bluetooth headset.
+        if PreferredInput.lastChoiceReplacedBluetooth { line += " · headset connected" }
         if stats.conversionFailures > 0 {
             line += " · \(stats.conversionFailures) conversion failures"
         }
