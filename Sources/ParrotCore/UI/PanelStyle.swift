@@ -25,6 +25,19 @@ enum PanelStyle {
     static let rowHeight: CGFloat = 34
     /// Rows' leading edge after the icon column, for dividers.
     static let textLeading: CGFloat = 38
+
+    /// A stretchable rounded rectangle, for the material's corners.
+    static func roundedMask(radius: CGFloat) -> NSImage {
+        let side = radius * 2 + 1
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
+    }
 }
 
 /// A small grey title above a card, as in Control Center and Settings.

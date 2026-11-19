@@ -33,11 +33,12 @@ enum RecordingCorpus {
 
     /// Keeps `samples`; returns the recording's name without extension, or
     /// nil when the corpus is off. Ends the previous dictation's correction
-    /// watch: this release comes before anything new is pasted.
+    /// watch, corpus or not (it also feeds fork-019's offers): this release
+    /// comes before anything new is pasted.
     @discardableResult
     static func keep(_ samples: [Float]) -> String? {
-        guard isEnabled(), !samples.isEmpty else { return nil }
         CorrectionWatch.shared.finish()
+        guard isEnabled(), !samples.isEmpty else { return nil }
         let name = fileName(for: Date())
         // Off the main actor: the transcription waits on it.
         Task.detached(priority: .utility) {
@@ -54,10 +55,11 @@ enum RecordingCorpus {
     }
 
     /// `text` was pasted for the recording `kept`: watch what the user does
-    /// with it.
+    /// with it. Without the corpus (`kept` nil) the watch still runs, for
+    /// fork-019's offers to learn a correction, and writes nothing.
     static func delivered(_ text: String, raw: String, kept: String?, model: String) {
-        guard let kept, !text.isEmpty else { return }
-        let file = Paths.corpus.appendingPathComponent(kept).appendingPathExtension("json")
+        guard !text.isEmpty else { return }
+        let file = kept.map { Paths.corpus.appendingPathComponent($0).appendingPathExtension("json") }
         CorrectionWatch.shared.start(pasted: text, raw: raw == text ? nil : raw, file: file, model: model)
     }
 

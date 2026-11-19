@@ -106,7 +106,7 @@ private final class SizingController: NSViewController {
             material.material = .popover
             material.state = .active
             material.blendingMode = .behindWindow
-            material.maskImage = Self.roundedMask(radius: PanelStyle.panelRadius)
+            material.maskImage = PanelStyle.roundedMask(radius: PanelStyle.panelRadius)
             inner.frame = material.bounds
             material.addSubview(inner)
             view = material
@@ -116,18 +116,5 @@ private final class SizingController: NSViewController {
     override func preferredContentSizeDidChange(for viewController: NSViewController) {
         super.preferredContentSizeDidChange(for: viewController)
         (view.window as? MenuBarPanel)?.fit(viewController.preferredContentSize)
-    }
-
-    /// A stretchable rounded rectangle, for the material's corners.
-    private static func roundedMask(radius: CGFloat) -> NSImage {
-        let side = radius * 2 + 1
-        let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
-            NSColor.black.setFill()
-            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
-            return true
-        }
-        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
-        image.resizingMode = .stretch
-        return image
     }
 }

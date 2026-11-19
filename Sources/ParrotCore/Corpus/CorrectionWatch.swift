@@ -31,7 +31,9 @@ struct CorrectionRecord: Codable, Equatable {
 }
 
 /// Watches the span a transcript was pasted into until the user leaves the
-/// field, dictates again, or a minute passes, then writes a `CorrectionRecord`.
+/// field, dictates again, or a minute passes, then writes a `CorrectionRecord`
+/// when the corpus is on. Whether it is or not, an edit that has settled is
+/// handed to `onEdit`, which offers to learn it (fork-019).
 /// Reads over Accessibility. The one write: an Electron app that names no
 /// focused element is asked to turn its accessibility on
 /// (`AXManualAccessibility`, Electron's documented switch for assistive
@@ -53,12 +55,21 @@ final class CorrectionWatch {
     nonisolated static let pollInterval: TimeInterval = 1
     nonisolated static let maxDuration: TimeInterval = 60
     nonisolated static let anchorLength = 16
+    /// How long an edit must stay as it is before `onEdit` hears of it: the
+    /// user has stopped typing (a word half retyped is no correction).
+    nonisolated static let settledDelay: TimeInterval = 2
+
+    /// Hears each settled edit: what Parrot pasted, and the span now. Called
+    /// once per distinct edit, also when focus leaves the field (a message
+    /// sent right after the fix), never while the next dictation is recorded.
+    var onEdit: ((_ pasted: String, _ edited: String) -> Void)?
     /// After asking an Electron app for its accessibility, Chromium builds
     /// its tree asynchronously: look again after each of these delays.
     nonisolated static let retryDelays: [TimeInterval] = [0.15, 0.3, 0.5, 0.8, 1, 1, 1, 1]
 
     private struct Watch {
-        let file: URL
+        /// The corpus record to write; nil when the corpus is off.
+        let file: URL?
         let model: String
         let pasted: String
         let raw: String?
@@ -72,6 +83,10 @@ final class CorrectionWatch {
         let location: Int
         let started: Date
         var span: String
+        /// When `span` last changed.
+        var changed: Date
+        /// The last span handed to `onEdit`.
+        var reported: String?
     }
 
     private var watch: Watch?
@@ -96,7 +111,7 @@ final class CorrectionWatch {
 
     /// Starts watching `pasted`, delivered for the recording `file`. Ends any
     /// watch still running first.
-    func start(pasted: String, raw: String?, file: URL, model: String) {
+    func start(pasted: String, raw: String?, file: URL?, model: String) {
         finish()
         let generation = self.generation
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay) { [weak self] in
@@ -127,12 +142,13 @@ final class CorrectionWatch {
 
     /// `attempt` counts the looks taken after asking an Electron app for its
     /// accessibility.
-    private func locate(pasted: String, raw: String?, file: URL, model: String, attempt: Int = 0) {
+    private func locate(pasted: String, raw: String?, file: URL?, model: String, attempt: Int = 0) {
         let focus = Self.focus()
         let app = focus.pid.flatMap { NSRunningApplication(processIdentifier: $0)?.bundleIdentifier }
         // Which step failed, for the log: never text, only sizes and AX codes.
         func unreadable(_ reason: String) {
             Log.info("  corpus: \(app ?? "unknown app"): \(reason)")
+            guard let file else { return }
             Self.write(CorrectionRecord(model: model, app: app, pasted: pasted, final: nil, status: .unreadable, watched: 0, raw: raw), to: file)
         }
         guard let element = focus.element else {
@@ -165,7 +181,7 @@ final class CorrectionWatch {
         watch = Watch(
             file: file, model: model, pasted: pasted, raw: raw, pid: focus.pid, element: element, app: app,
             before: anchors.before, after: anchors.after,
-            location: range.lowerBound, started: Date(), span: pasted
+            location: range.lowerBound, started: Date(), span: pasted, changed: Date()
         )
         let timer = Timer(timeInterval: Self.pollInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.poll() }
@@ -181,11 +197,26 @@ final class CorrectionWatch {
             // Focus left the field: its text may be gone (a sent message), so
             // the span from the last look stands.
             _ = stop()
+            report(watch)
             write(watch)
             return
         }
-        if let span = currentSpan(of: watch) { self.watch?.span = span }
-        if Date().timeIntervalSince(watch.started) >= Self.maxDuration { finish() }
+        let now = Date()
+        if let span = currentSpan(of: watch), span != watch.span {
+            self.watch?.span = span
+            self.watch?.changed = now
+        }
+        guard let current = self.watch else { return }
+        if now.timeIntervalSince(current.changed) >= Self.settledDelay { report(current) }
+        if now.timeIntervalSince(current.started) >= Self.maxDuration { finish() }
+    }
+
+    /// Hands the span to `onEdit` if it differs from the paste and from what
+    /// was handed last.
+    private func report(_ watch: Watch) {
+        guard watch.span != watch.pasted, watch.span != watch.reported else { return }
+        self.watch?.reported = watch.span
+        onEdit?(watch.pasted, watch.span)
     }
 
     /// The span between the anchors in the field now, or nil when the field
@@ -252,12 +283,13 @@ final class CorrectionWatch {
     private static let manualAccessibilityAttribute = "AXManualAccessibility" as CFString
 
     private func write(_ watch: Watch) {
+        guard let file = watch.file else { return }
         let status: CorrectionRecord.Status = watch.span == watch.pasted ? .unchanged : .edited
         let record = CorrectionRecord(
             model: watch.model, app: watch.app, pasted: watch.pasted, final: watch.span,
             status: status, watched: (Date().timeIntervalSince(watch.started) * 10).rounded() / 10, raw: watch.raw
         )
-        Self.write(record, to: watch.file)
+        Self.write(record, to: file)
     }
 
     private static func write(_ record: CorrectionRecord, to file: URL) {

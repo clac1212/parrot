@@ -157,6 +157,7 @@ package enum NightlyReview {
         let dictionary = (try? UserDictionary.parse(Data(contentsOf: Paths.dictionaryFile))) ?? .empty
         let mapped = Set(dictionary.replacements.flatMap { r in r.from.map { key(wrong: $0, right: r.to) } })
         let memory = VerdictMemory.load()
+        let refusals = Refusals.load()
         let speller = NSSpellChecker.shared
 
         let kept = tallies.values.filter { t in
@@ -164,6 +165,8 @@ package enum NightlyReview {
             let count = t.user + t.reference
             guard t.user >= 1 || t.reference >= 2 else { return false }
             guard !mapped.contains(k), t.wrong.contains(where: \.isLetter) else { return false }
+            // The user let it go when it was offered (fork-019).
+            guard !refusals.dropped(k) else { return false }
             if let judged = memory.entries[k], judged.verdict == VerdictMemory.removed || count < judged.count * reaskFactor { return false }
             return true
         }

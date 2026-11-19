@@ -98,6 +98,18 @@ Measured with `StatusPanelAnimationProbe` and `PopoverResizeProbe`
   photographs the real panel with `screencapture`, but only if the
   terminal running it has Screen Recording; otherwise it writes nothing.
 
+### A panel that must not take the keyboard (fork-019)
+
+`CorrectionOfferPanel` shows up while the user is typing in another app:
+`[.borderless, .nonactivatingPanel]`, not key (a borderless window refuses
+key by default; don't override `canBecomeKey`), `orderFrontRegardless()`,
+`hidesOnDeactivate = false` (Parrot is never the active app). For its
+buttons to answer the first click, its `NSHostingView` subclass returns
+true from `acceptsFirstMouse(for:)`. Its content is fixed per offer, so
+`fittingSize` at each show is enough (unlike the menu-bar panel, §1).
+Offscreen snapshots of it draw nothing unless the view is in a window
+(`CorrectionOfferTests.testSnapshot`).
+
 ## 4. Checking a change — before telling the user it's done
 
 1. **Sizing test** (`StatusPanelSizingTests`): `preferredContentSize` is

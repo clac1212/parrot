@@ -151,6 +151,10 @@ public enum Daemon {
         observers.append(LatencyLog())
         if let media = MediaPause() { observers.append(media) }  // fork-008
         observers.append(BrowserAccessibility())  // fork-018
+        if overlay != nil {  // fork-019: offers to learn a correction as the user makes it
+            let offer = CorrectionOffer()
+            CorrectionWatch.shared.onEdit = { offer.consider(pasted: $0, edited: $1) }
+        }
         let controller = DictationController(
             capture: capture,
             transcriber: transcriber,

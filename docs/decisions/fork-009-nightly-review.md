@@ -351,6 +351,14 @@ scoring.
   user kept as often as they corrected it (it would have stopped Codex's
   "plaît → plait"). No rule beside the judge.
 
+### Corrections learned during the day (2026-11-19, fork-019)
+
+- A word the user fixes by hand is offered for the dictionary within
+  seconds, and added on their click. Those entries are the user's: not in
+  `learned.json`, so the audit never removes them.
+- A pair the user let go twice (`dictionary-refusals.json`) is no longer a
+  candidate here: the judge must not add at night what the user declined.
+
 ## 5. Later
 
 - With a few hours of corrected audio, fine-tune Parakeet on the user's voice

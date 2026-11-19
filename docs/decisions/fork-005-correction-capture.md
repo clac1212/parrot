@@ -110,6 +110,9 @@ got its final text back from the message the user sent; the other became
   the main thread, each bounded by the 0.25 s messaging timeout.
 - Edits are not all transcription errors (the user also rewrites); the data
   needs alignment and review before it feeds a dictionary or a WER.
+- Since fork-019 (2026-11-19) the watch also runs with the corpus off, writing
+  nothing, and hands each edit that has settled for 2 s to `onEdit`, which
+  offers to learn it.
 
 ## 4. When to Revisit
 
