@@ -59,6 +59,8 @@ final class MenuBarPanel: NSPanel {
         setFrame(NSRect(x: x, y: top - size.height, width: size.width, height: size.height), display: true)
         alphaValue = 0
         makeKeyAndOrderFront(nil)
+        // The shadow from the rounded content, not the default window shape.
+        invalidateShadow()
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.12
             animator().alphaValue = 1
@@ -100,7 +102,7 @@ private final class SizingController: NSViewController {
             let glass = NSGlassEffectView()
             glass.cornerRadius = PanelStyle.panelRadius
             glass.contentView = inner
-            view = glass
+            view = Self.rounded(glass)
         } else {
             let material = NSVisualEffectView()
             material.material = .popover
@@ -109,8 +111,24 @@ private final class SizingController: NSViewController {
             material.maskImage = PanelStyle.roundedMask(radius: PanelStyle.panelRadius)
             inner.frame = material.bounds
             material.addSubview(inner)
-            view = material
+            view = Self.rounded(material)
         }
+    }
+
+    /// `view` clipped to the glass's corners. Only the glass was rounded, so
+    /// the window server drew the shadow and its 1 pt rim on a plain
+    /// window's shape: square at the bottom, small corners at the top, out
+    /// past the glass (photographed in quill with and without the shadow,
+    /// 2026-11-24).
+    private static func rounded(_ view: NSView) -> NSView {
+        let container = NSView()
+        container.wantsLayer = true
+        container.layer?.cornerRadius = PanelStyle.panelRadius
+        container.layer?.cornerCurve = .continuous
+        container.layer?.masksToBounds = true
+        view.autoresizingMask = [.width, .height]
+        container.addSubview(view)
+        return container
     }
 
     override func preferredContentSizeDidChange(for viewController: NSViewController) {

@@ -1,6 +1,6 @@
 # Fork ADR-017 :: The panel in today's macOS look
 
-Last updated: `2026.11.16` · Status: **built**, to be judged by the user
+Last updated: `2026.11.24` · Status: **built**, to be judged by the user
 
 > The menu-bar panel (fork-010) looked like 2015: big bold titles, full-width
 > dividers, home-made pill buttons, no icons, an opaque popover with an
@@ -43,6 +43,18 @@ Last updated: `2026.11.16` · Status: **built**, to be judged by the user
   others under hairlines; hover highlights a row in a rounded inset.
 - **Older macOS** (14–25): same layout on a blurred material, pills
   instead of glass.
+- **The corners, 2026-11-24.** The user saw a dark 1 pt rim past the glass:
+  square at the bottom corners, a smaller curve than the glass's at the
+  top. Only the glass was rounded, not the window, so the window server
+  drew the shadow and its rim on a plain window's shape. Found in quill,
+  which shares this window, by photographing it with `screencapture -l`
+  with and without its shadow (`-o`): without, the corners were clean.
+  The window's content is now a container clipped to the glass's corners
+  (18 pt, continuous), and `show` recomputes the shadow once on screen
+  (`fit` already did on every resize). Parrot's own probe
+  (`StatusPanelScreenshot`, now photographing with the shadow too) showed
+  clean corners before the fix as well: the defect needs the real app's
+  window; the user's eye confirms it.
 - The fold animation keeps fork-015's measured recipe (docs/fork-ui-notes.md
   §2); re-measured in the new window: header fixed at 18 pt, window top
   fixed, window 376 → 612 pt at once, bottom of the content gliding

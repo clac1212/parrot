@@ -91,6 +91,12 @@ Measured with `StatusPanelAnimationProbe` and `PopoverResizeProbe`
   borderless window refuses key status: override `canBecomeKey`. Closing:
   `hidesOnDeactivate` (click in another app), `didResignKey`, Escape
   (`cancelOperation`).
+- **Round the window's content, not only the glass.** A borderless window's
+  shadow (and its 1 pt rim) follows what the content covers; with only
+  `NSGlassEffectView.cornerRadius`, the rim showed a plain window's
+  corners past the glass (fork-017, 2026-11-24). The content view is a
+  layer-backed container with the same radius and `masksToBounds`; call
+  `invalidateShadow()` after showing and after resizing.
 - **Corners are concentric**: inner radius = outer radius − inset (glass
   18 pt, cards 10 pt, 8 pt inside).
 - **Can't be seen offscreen**: `cacheDisplay` snapshots draw glass buttons

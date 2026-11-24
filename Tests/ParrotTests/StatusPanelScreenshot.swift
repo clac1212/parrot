@@ -6,7 +6,7 @@ import XCTest
 /// Diagnostic: the real panel in its `MenuBarPanel` on screen, photographed with
 /// `screencapture` — the only way to see Liquid Glass, which offscreen
 /// snapshots don't draw. PANEL_SCREENSHOT=<dir> writes folded.png and
-/// unfolded.png there. Needs Screen Recording for the terminal.
+/// unfolded.png there, and each with its shadow (-shadow.png). Needs Screen Recording for the terminal.
 final class StatusPanelScreenshot: XCTestCase {
     @MainActor
     func testScreenshot() throws {
@@ -30,11 +30,15 @@ final class StatusPanelScreenshot: XCTestCase {
         func shoot(_ name: String) throws {
             RunLoop.main.run(until: Date().addingTimeInterval(1.0))
             let number = hosting.view.window!.windowNumber
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-            task.arguments = ["-x", "-o", "-l", "\(number)", "\(dir)/\(name).png"]
-            try task.run()
-            while task.isRunning { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+            // Without the shadow, then with it: its rim showed past the
+            // glass's corners (2026-11-24).
+            for (suffix, options) in [("", ["-o"]), ("-shadow", [])] {
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+                task.arguments = ["-x"] + options + ["-l", "\(number)", "\(dir)/\(name)\(suffix).png"]
+                try task.run()
+                while task.isRunning { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+            }
         }
         try shoot("folded")
         model.historyExpanded = true
