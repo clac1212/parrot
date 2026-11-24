@@ -75,6 +75,7 @@ step, so they won't feel complexity creep: **it's your job to push back.**
   - [fork-019](docs/decisions/fork-019-learn-a-correction-as-it-is-made.md) — a word fixed by hand after a paste comes out of the notch for the dictionary (« pip → Peep · Ajouter »), asked first; unanswered ones wait 2 min (hover the notch, or the menu-bar panel), then count as refused; a refusal is final, for the nightly review too
   - [fork-020](docs/decisions/fork-020-no-voice-isolation.md) — **rejected**: voice isolation before transcription — Apple's `AUSoundIsolation` makes Parakeet 3–5× worse, noisy or clean
   - [fork-021](docs/decisions/fork-021-last-word-after-the-key.md) — released while the voice is still on, the recording goes on until 150 ms of silence (400 ms at most); released in silence, it stops at once
+  - [fork-022](docs/decisions/fork-022-no-fluid-speech-pro.md) — **rejected**: FluidVoice's Fluid Speech Pro instead of Parakeet Ultra — about 2× the errors on the user's dictations, noisy or clean; Mini is English only
 
 ## Commands
 

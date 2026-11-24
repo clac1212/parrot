@@ -32,10 +32,16 @@ package actor ParakeetTranscriber: ModelTranscriber {
     /// last component is FluidAudio's folder name for `.ultra`, which it
     /// checks when loading.
     private static var directory: URL {
-        Paths.appSupport
+        if let directoryOverride { return directoryOverride }
+        return Paths.appSupport
             .appendingPathComponent("fluidaudio", isDirectory: true)
             .appendingPathComponent("parakeet-ultra", isDirectory: true)
     }
+
+    /// Another build of the same model to load instead, for parrot-bench
+    /// (`--parakeet-dir`): FluidVoice's Fluid Speech Pro, measured
+    /// 2026-11-24. Its last component must stay `parakeet-ultra`.
+    package nonisolated(unsafe) static var directoryOverride: URL?
 
     package static func isCached(_ model: TranscriptionModel) -> Bool {
         AsrModels.modelsExist(at: directory, version: version)

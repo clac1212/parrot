@@ -110,3 +110,6 @@ way to exclude tokens.
   Whisper didn't have → bench both on it (`parrot-bench transcription`, either
   engine) and decide again.
 - Upstream adds its own Parakeet engine → take theirs, drop this one.
+- A post-training of Ultra comes out → bench it on the corpus against Ultra
+  (`parrot-bench transcription --parakeet-dir`). Done once for FluidVoice's
+  Fluid Speech Pro, 2026-11-24: about 2× the errors, not taken (fork-022).

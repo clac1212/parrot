@@ -73,6 +73,8 @@ struct BenchTranscription: ParsableCommand {
 
     @Option(name: .long, help: "Model id to use. Defaults to the recommended model.") var model: String?
 
+    @Option(name: .long, help: "Folder of another Parakeet Ultra-compatible build, named parakeet-ultra.") var parakeetDir: String?
+
     @Option(name: .long, help: "Prompt text to use instead of the dictionary's example sentence.") var prompt: String?
 
     @Flag(name: .long, help: "Run without a prompt.") var noPrompt: Bool = false
@@ -113,6 +115,7 @@ struct BenchTranscription: ParsableCommand {
                 folder: folder,
                 runs: runs,
                 model: model,
+                parakeetDir: parakeetDir,
                 prompt: prompt,
                 noPrompt: noPrompt,
                 baseline: baseline,

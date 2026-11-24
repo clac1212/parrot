@@ -12,6 +12,8 @@ struct BenchOptions {
     var runs: Int
     /// Model id; the recommended model when nil.
     var model: String?
+    /// Another Parakeet Ultra-compatible build to load (fork-004).
+    var parakeetDir: String?
     /// Prompt text instead of the dictionary's example sentence.
     var prompt: String?
     /// Run without any prompt, even if the dictionary has an example sentence.
@@ -41,6 +43,7 @@ struct BenchOptions {
         folder: String,
         runs: Int = 10,
         model: String? = nil,
+        parakeetDir: String? = nil,
         prompt: String? = nil,
         noPrompt: Bool = false,
         baseline: Bool = false,
@@ -56,6 +59,7 @@ struct BenchOptions {
         self.folder = folder
         self.runs = runs
         self.model = model
+        self.parakeetDir = parakeetDir
         self.prompt = prompt
         self.noPrompt = noPrompt
         self.baseline = baseline
@@ -87,6 +91,7 @@ enum TranscriptionBench {
             throw SilentExit(1)
         }
         let parakeet = model.isParakeet  // fork-004
+        if let dir = options.parakeetDir { ParakeetTranscriber.directoryOverride = URL(fileURLWithPath: dir, isDirectory: true) }
         guard parakeet ? ParakeetTranscriber.isCached(model) : WhisperKitTranscriber.isCached(model) else {
             print("\(model.id) is not downloaded; run: parrot models download \(model.id)")
             throw SilentExit(1)
